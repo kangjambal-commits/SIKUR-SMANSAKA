@@ -1528,7 +1528,10 @@
 
                 // Prioritas operasional: mapel sama -> beban hari lebih ringan -> beban minggu lebih ringan.
                 candidates = candidates.map(c => {
-                    const mapelSama = c.mapel_id === jTarget.mapel_id;
+                    // Guru tidak menyimpan mapel tunggal di master. Turunkan kompetensi mapel
+                    // dari jadwal mengajar aktual agar guru yang mengajar mapel target diprioritaskan.
+                    const mapelGuru = [...new Set(vSikurJadwalLengkap.filter(j => j.guru_id === c.id).map(j => j.mapel_id).filter(Boolean))];
+                    const mapelSama = mapelGuru.includes(jTarget.mapel_id);
                     const bebanHariIni = vSikurJadwalLengkap.filter(j => j.guru_id === c.id && j.hari === jTarget.hari).length;
                     const bebanMinggu = vSikurJadwalLengkap.filter(j => j.guru_id === c.id).length;
                     const tugasPenggantiHariIni = statePengganti.filter(p => p.guru_pengganti_id === c.id && p.tanggal === tanggal).length;
@@ -1536,7 +1539,7 @@
                     score -= (bebanHariIni * 5);
                     score -= (tugasPenggantiHariIni * 8);
                     score -= (bebanMinggu * 0.2);
-                    return { ...c, prioritas: score, mapelSama, bebanHariIni, bebanMinggu, tugasPenggantiHariIni };
+                    return { ...c, prioritas: score, mapelSama, mapelGuru, bebanHariIni, bebanMinggu, tugasPenggantiHariIni };
                 }).sort((a,b) => b.prioritas - a.prioritas || a.bebanHariIni - b.bebanHariIni || a.nama.localeCompare(b.nama));
 
                 renderCandidateList(candidates, jTarget, tanggal);
@@ -1558,7 +1561,7 @@
                             ${c.nama}
                             ${c.mapelSama ? '<span class="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Mapel sama</span>' : ''}
                         </p>
-                        <p class="text-xs text-gray-500">${dbMapel.find(m=>m.id===c.mapel_id)?.nama || '-'} • Hari ini ${c.bebanHariIni} JP • Minggu ${c.bebanMinggu} JP${c.tugasPenggantiHariIni ? ' • Pengganti hari ini '+c.tugasPenggantiHariIni+'x' : ''}</p>
+                        <p class="text-xs text-gray-500">${(c.mapelGuru||[]).map(id=>dbMapel.find(m=>m.id===id)?.nama||id).join(', ') || 'Mapel belum teridentifikasi'} • Hari ini ${c.bebanHariIni} JP • Minggu ${c.bebanMinggu} JP${c.tugasPenggantiHariIni ? ' • Pengganti hari ini '+c.tugasPenggantiHariIni+'x' : ''}</p>
                     </div>
                     <button onclick="tetapkanPengganti(${jTarget.id}, '${c.id}', '${tanggal}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded text-xs font-bold transition-colors border border-blue-200">
                         Pilih
@@ -2127,11 +2130,14 @@
             const busy = new Set(vSikurJadwalLengkap.filter(j=>j.hari===hari && Number(j.jam_ke)===jp).map(j=>j.guru_id));
             statePengganti.filter(p=>p.tanggal===abs.tanggal && p.hari===hari && Number(p.jam_ke)===jp).forEach(p=>busy.add(p.guru_pengganti_id));
             return dbGuru.filter(g=>g.id!==abs.guru_id && !absentToday.has(g.id) && !busy.has(g.id)).map(g=>{
-                const weeklyLoad=vSikurJadwalLengkap.filter(j=>j.guru_id===g.id).length;
-                const sameMapel=(g.mapel_id===target.mapel_id);
-                const dayLoad=vSikurJadwalLengkap.filter(j=>j.guru_id===g.id && j.hari===hari).length;
-                const score=(sameMapel?100:0) - weeklyLoad - dayLoad*2;
-                return {...g, weeklyLoad, dayLoad, sameMapel, score};
+                const jadwalGuru=vSikurJadwalLengkap.filter(j=>j.guru_id===g.id);
+                const weeklyLoad=jadwalGuru.length;
+                const mapelIds=[...new Set(jadwalGuru.map(j=>j.mapel_id).filter(Boolean))];
+                const sameMapel=mapelIds.includes(target.mapel_id);
+                const dayLoad=jadwalGuru.filter(j=>j.hari===hari).length;
+                const substituteToday=statePengganti.filter(p=>p.guru_pengganti_id===g.id && p.tanggal===abs.tanggal).length;
+                const score=(sameMapel?100:0) - weeklyLoad - dayLoad*2 - substituteToday*8;
+                return {...g, weeklyLoad, dayLoad, mapelIds, sameMapel, substituteToday, score};
             }).sort((a,b)=>b.score-a.score || a.weeklyLoad-b.weeklyLoad || a.nama.localeCompare(b.nama));
         }
 
