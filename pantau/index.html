@@ -7,23 +7,40 @@
 <div class="brand"><div class="logo">PK</div><div><h1>PantauKBM</h1><div class="muted">Monitoring KBM • SMA Negeri 1 Karangreja • TA 2026/2027</div></div></div>
 <section id="login" class="card"><h2>Masuk Ketua Kelas</h2><p class="muted">Pilih kelas dan masukkan PIN 6 angka.</p>
 <div class="row"><div class="grow"><label class="muted" for="kelas">Kelas</label><select id="kelas"><option value="XI-A" selected>XI-A</option></select></div><div class="grow"><label class="muted" for="pin">PIN</label><input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="PIN 6 angka"></div></div>
-<div style="margin-top:10px"><button onclick="login()">Masuk</button></div><p id="loginMsg" class="muted"></p></section>
+<div style="margin-top:10px"><button id="btnMasuk" type="button">Masuk</button></div><p id="loginMsg" class="muted"></p></section>
 <section id="app" class="hidden"><div class="card"><div class="row"><div class="grow"><h2 id="who"></h2><div id="date" class="muted"></div></div><div><button class="secondary" onclick="logout()">Keluar</button></div></div></div>
 <div id="list"></div></section>
 <div class="muted" style="text-align:center;padding:18px">Ketua kelas melaporkan fakta keterlaksanaan KBM. Verifikasi dilakukan oleh Waka/Admin SIKUR.</div>
 </div><script>
 const SB_URL='https://nmktzoyhgmpdmbegseaq.supabase.co';
 const SB_KEY='sb_publishable_8CUhwiz7SjqlAsiCpI0pog_aDccxojf';
-const sb=supabase.createClient(SB_URL,SB_KEY);
+let sb=null;
+try{
+  if(!window.supabase || !window.supabase.createClient) throw new Error('Komponen koneksi belum termuat. Muat ulang halaman.');
+  sb=window.supabase.createClient(SB_URL,SB_KEY);
+}catch(e){
+  window.addEventListener('DOMContentLoaded',()=>{const m=document.getElementById('loginMsg');if(m){m.className='err';m.textContent=e.message;}});
+}
 const classes=['X-A','X-B','X-C','X-D','X-E','X-F','X-G','X-H','X-I','XI-A','XI-B','XI-C','XI-D','XI-E','XI-F','XI-G','XI-H','XI-I','XII-A','XII-B','XII-C','XII-D','XII-E','XII-F','XII-G','XII-H','XII-I'];
 document.getElementById('kelas').innerHTML=classes.map(x=>'<option value="'+x+'"'+(x==='XI-A'?' selected':'')+'>'+x+'</option>').join('');
 let session=JSON.parse(localStorage.getItem('pantaukbm_session')||'null');
 const statuses=['Hadir','Terlambat','Belum Hadir','Meninggalkan Kelas Sebelum Selesai','Tidak Hadir','Guru Pengganti','Tugas Mandiri'];
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function fmt(t){return t?String(t).slice(0,5):'-'}
-async function login(){const msg=document.getElementById('loginMsg');msg.textContent='Memeriksa...';const kelas=document.getElementById('kelas').value,pin=document.getElementById('pin').value.trim();if(!/^\d{6}$/.test(pin)){msg.textContent='PIN harus 6 angka.';return}
-const {data,error}=await sb.rpc('sikur_login_ketua_kelas',{p_kelas:kelas,p_pin:pin});if(error||!data?.length){msg.textContent='Kelas/PIN tidak cocok.';return}
-session=data[0];localStorage.setItem('pantaukbm_session',JSON.stringify(session));await openApp()}
+async function login(){
+ const msg=document.getElementById('loginMsg'),btn=document.getElementById('btnMasuk');
+ try{
+  if(!sb) throw new Error('Koneksi aplikasi belum siap. Muat ulang halaman.');
+  const kelas=document.getElementById('kelas').value,pin=document.getElementById('pin').value.trim();
+  if(!/^\\d{6}$/.test(pin)){msg.className='err';msg.textContent='PIN harus 6 angka.';return;}
+  btn.disabled=true;btn.textContent='Memeriksa...';msg.className='muted';msg.textContent='Menghubungkan ke SIKUR...';
+  const {data,error}=await sb.rpc('sikur_login_ketua_kelas',{p_kelas:kelas,p_pin:pin});
+  if(error) throw error;
+  if(!data?.length) throw new Error('Kelas/PIN tidak cocok.');
+  session=data[0];localStorage.setItem('pantaukbm_session',JSON.stringify(session));await openApp();
+ }catch(e){msg.className='err';msg.textContent='Gagal masuk: '+(e?.message||String(e));}
+ finally{btn.disabled=false;btn.textContent='Masuk';}
+}
 async function openApp(){if(!session)return;document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('who').textContent=session.nama_ketua+' • '+session.kelas;document.getElementById('date').textContent=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:'Asia/Jakarta'}).format(new Date());await load()}
 async function load(){const box=document.getElementById('list');box.innerHTML='<div class="card muted">Memuat jadwal hari ini...</div>';const {data,error}=await sb.rpc('sikur_jadwal_ketua_hari_ini',{p_token:session.token});if(error){box.innerHTML='<div class="card err">'+esc(error.message)+'</div>';return}
 if(!data?.length){box.innerHTML='<div class="card muted">Tidak ada jadwal KBM untuk kelas ini hari ini.</div>';return}
@@ -34,5 +51,7 @@ box.innerHTML=data.map(r=>`<div class="card" id="j${r.jadwal_id}"><div class="ro
 let selected={};function choose(id,s){selected[id]=s;document.getElementById('d'+id).classList.remove('hidden');document.querySelectorAll('#j'+id+' .statusgrid button').forEach(b=>b.classList.toggle('sel',b.textContent===s))}
 async function save(id){const status=selected[id];if(!status)return;const m=document.getElementById('m'+id);m.textContent='Mengirim...';const args={p_token:session.token,p_jadwal_id:id,p_status:status,p_jam_masuk:document.getElementById('in'+id).value||null,p_jam_keluar:document.getElementById('out'+id).value||null,p_keterangan:document.getElementById('ket'+id).value||null};const {error}=await sb.rpc('sikur_lapor_kbm',args);if(error){m.className='err';m.textContent=error.message;return}m.className='ok';m.textContent='Laporan tersimpan.';setTimeout(load,500)}
 function logout(){localStorage.removeItem('pantaukbm_session');session=null;location.reload()}
+document.getElementById('btnMasuk').addEventListener('click',login);
+document.getElementById('pin').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
 if(session)openApp();
 </script></body></html>
