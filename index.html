@@ -622,8 +622,9 @@
                     <!-- Candidates -->
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[500px] relative">
                         <div class="p-4 border-b border-gray-100 bg-gray-50">
-                            <h3 class="font-semibold text-gray-700">Kandidat Pengganti</h3>
+                            <h3 class="font-semibold text-gray-700">Rekomendasi Guru Pengganti</h3>
                             <p class="text-xs text-gray-500" id="invalCandidateTarget">Pilih salah satu jam pelajaran di samping</p>
+                            <p class="text-[11px] text-blue-600 mt-1">Prioritas: guru piket yang kosong pada JP tersebut, guru BK, lalu guru lain yang tersedia.</p>
                         </div>
                         <div class="flex-1 overflow-y-auto p-4" id="invalCandidateList">
                             <div class="h-full flex flex-col items-center justify-center text-gray-400">
@@ -1565,7 +1566,7 @@
             const loader = document.getElementById('candidateLoader');
             loader.classList.remove('hidden');
 
-            document.getElementById('invalCandidateTarget').innerText = `Kandidat untuk: JP ${jTarget.jam_ke} | Kelas ${jTarget.kelas_nama}`;
+            document.getElementById('invalCandidateTarget').innerText = `JP ${jTarget.jam_ke} • ${jTarget.waktu_mulai}-${jTarget.waktu_selesai} • Kelas ${jTarget.kelas_nama} • ${jTarget.mapel_nama}`;
 
             setTimeout(() => {
                 // LANGKAH 1 & 2: Cari guru yg TIDAK punya jadwal di hari + jam_ke tsb
@@ -1618,15 +1619,16 @@
             }
 
             list.innerHTML = candidates.map(c => `
-                <div class="flex justify-between items-center p-3 mb-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-blue-300">
-                    <div>
+                <div class="flex justify-between items-center p-3 mb-2 ${c.guruPiket?'bg-green-50 border-green-200':'bg-white border-gray-200'} border rounded-lg shadow-sm hover:border-blue-300">
+                    <div class="min-w-0 pr-2">
                         <p class="font-bold text-sm text-gray-800 ${c.mapelSama ? 'text-blue-700' : ''}">
                             ${c.nama}
                             ${c.guruPiket ? '<span class="ml-1 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Piket hari ini</span>' : ''}
                             ${c.guruBk ? '<span class="ml-1 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Guru BK</span>' : ''}
                             ${c.mapelSama ? '<span class="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Mapel sama</span>' : ''}
                         </p>
-                        <p class="text-xs text-gray-500">${(c.mapelGuru||[]).map(id=>dbMapel.find(m=>m.id===id)?.nama||id).join(', ') || 'Mapel belum teridentifikasi'} • Hari ini ${c.bebanHariIni} JP • Minggu ${c.bebanMinggu} JP${c.tugasPenggantiHariIni ? ' • Pengganti hari ini '+c.tugasPenggantiHariIni+'x' : ''}</p>
+                        <p class="text-[11px] font-semibold text-green-600 mt-1">✓ Kosong pada JP ini</p>
+                        <p class="text-xs text-gray-500 mt-1">${(c.mapelGuru||[]).map(id=>dbMapel.find(m=>m.id===id)?.nama||id).join(', ') || 'Mapel belum teridentifikasi'} • Hari ini ${c.bebanHariIni} JP • Minggu ${c.bebanMinggu} JP${c.tugasPenggantiHariIni ? ' • Pengganti hari ini '+c.tugasPenggantiHariIni+'x' : ''}</p>
                     </div>
                     <button onclick="tetapkanPengganti(${jTarget.id}, '${c.id}', '${tanggal}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded text-xs font-bold transition-colors border border-blue-200">
                         Pilih
