@@ -1467,12 +1467,12 @@
         }
 
         function selectAbsensiForInval(absensiId) {
-            const a = stateKetidakhadiran.find(x => x.id === absensiId);
+            const a = stateKetidakhadiran.find(x => String(x.id) === String(absensiId));
+            if(!a) return alert('Data ketidakhadiran tidak ditemukan.');
             const guru = dbGuru.find(g => g.id === a.guru_id);
+            if(!guru) return alert('Data guru tidak ditemukan.');
             
-            const dateObj = new Date(a.tanggal);
-            const hariNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            const hari = hariNames[dateObj.getDay()];
+            const hari = getHariFromDate(a.tanggal);
 
             // Update Header
             document.getElementById('invalGuruName').innerText = guru.nama;
@@ -1500,7 +1500,7 @@
 
             listContainer.innerHTML = jadwalTerdampak.map(j => {
                 // Check if already assigned
-                const existingInval = statePengganti.find(p => p.jadwal_id === j.id && p.tanggal === a.tanggal);
+                const existingInval = statePengganti.find(p => String(p.jadwal_id) === String(j.id) && p.tanggal === a.tanggal);
                 let statusHtml = existingInval 
                     ? `<span class="text-xs text-green-700 bg-green-100 px-2 py-1 rounded font-semibold flex items-center gap-1"><i class="ph ph-check-circle"></i> Selesai • ${dbGuru.find(g=>g.id===existingInval.guru_pengganti_id)?.nama||'Pengganti ditetapkan'}</span>`
                     : `<span class="text-xs text-red-700 bg-red-100 px-2 py-1 rounded border border-red-200 font-semibold flex items-center gap-1"><i class="ph ph-warning-circle"></i> Perlu tindakan</span>`;
@@ -1570,7 +1570,7 @@
 
             setTimeout(() => {
                 // LANGKAH 1 & 2: Cari guru yg TIDAK punya jadwal di hari + jam_ke tsb
-                const jadwalHariItu = vSikurJadwalLengkap.filter(j => j.hari === jTarget.hari && j.jam_ke === jTarget.jam_ke);
+                const jadwalHariItu = vSikurJadwalLengkap.filter(j => j.hari === jTarget.hari && Number(j.jam_ke) === Number(jTarget.jam_ke));
                 const guruSibukIds = jadwalHariItu.map(j => j.guru_id);
                 
                 // LANGKAH 3: Exclude absen, sibuk, already inval
@@ -1578,7 +1578,7 @@
                 const absentGuruIds = stateKetidakhadiran.filter(a => a.tanggal === tanggal).map(a => a.guru_id);
                 
                 // Get teachers already assigned as substitute on that exact slot
-                const alreadyInvalIds = statePengganti.filter(p => p.tanggal === tanggal && p.hari === jTarget.hari && p.jam_ke === jTarget.jam_ke).map(p => p.guru_pengganti_id);
+                const alreadyInvalIds = statePengganti.filter(p => p.tanggal === tanggal && p.hari === jTarget.hari && Number(p.jam_ke) === Number(jTarget.jam_ke)).map(p => p.guru_pengganti_id);
 
                 let candidates = dbGuru.filter(g => 
                     g.id !== jTarget.guru_id &&
