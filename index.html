@@ -863,6 +863,18 @@
 
         // Sinkronisasi Wali Kelas TA 2026/2027 ke Supabase.
         // Tabel dibuat sekali melalui SQL setup; aplikasi tetap memiliki data bawaan sebagai fallback.
+        async function persistWaliKelasToSupabase(kelasId,kodeGuru) {
+            if(!supabaseReady || !roleCanManageMaster()) return;
+            try {
+                const {error}=await sb.from('sikur_wali_kelas').upsert({tahun_ajaran:'2026/2027',kelas:kelasId,kode_guru:kodeGuru,updated_at:new Date().toISOString()},{onConflict:'tahun_ajaran,kelas'});
+                if(error) throw error;
+                setSupabaseStatus(true,'Tersimpan');
+            } catch(e) {
+                console.warn('Gagal menyimpan wali kelas ke Supabase',e);
+                setSupabaseStatus(false,'Wali kelas belum sinkron');
+            }
+        }
+
         async function syncWaliKelasFromSupabase() {
             if(!sb) return;
             try {
@@ -1969,7 +1981,13 @@
             k.value=''; n.value='';
             if(masterTab==='guru'){ k.placeholder='Kode Guru (mis. YUGO)'; n.placeholder='Nama Guru'; x.innerHTML='<input id="masterMapelUtama" class="border rounded-lg px-3 py-2 text-sm w-full" placeholder="Kode mapel utama (mis. BIND)">'; }
             else if(masterTab==='mapel'){ k.placeholder='Kode Mapel (mis. BIND)'; n.placeholder='Nama Mata Pelajaran'; x.innerHTML=''; }
-            else if(masterTab==='kelas'){ k.placeholder='Nama/Kode Kelas (mis. XI-A)'; n.placeholder='Nama Kelas (mis. XI-A)'; x.innerHTML=''; }
+            else if(masterTab==='kelas'){
+                k.placeholder='Nama/Kode Kelas (mis. XI-A)'; n.placeholder='Nama Kelas (mis. XI-A)';
+                x.innerHTML=`<select id="masterWaliKelas" class="border rounded-lg px-3 py-2 text-sm w-full">
+                    <option value="">-- Pilih Wali Kelas TA 2026/2027 --</option>
+                    ${dbGuru.slice().sort((a,b)=>a.nama.localeCompare(b.nama)).map(g=>`<option value="${g.id}">${g.nama}</option>`).join('')}
+                </select>`;
+            }
             else {
                 k.placeholder='ID jadwal (otomatis jika baru)'; n.placeholder='Tidak digunakan';
                 x.innerHTML=`<div class="grid grid-cols-2 md:grid-cols-5 gap-2">
@@ -2016,6 +2034,12 @@
                 const id=kode||nama.toUpperCase(); if(!id) return alert('Nama kelas wajib diisi.');
                 const obj={id,nama:nama||id}; const idx=dbKelas.findIndex(x=>x.id===masterEditKey);
                 if(idx>=0) dbKelas[idx]=obj; else { if(dbKelas.some(x=>x.id===id)) return alert('Kelas sudah ada.'); dbKelas.push(obj); }
+                const waliKode=document.getElementById('masterWaliKelas')?.value||'';
+                if(waliKode) {
+                    if(masterEditKey && masterEditKey!==id) delete dbWaliKelas[masterEditKey];
+                    dbWaliKelas[id]=waliKode;
+                    persistWaliKelasToSupabase(id,waliKode);
+                }
             } else {
                 const hari=document.getElementById('mjHari').value, jp=Number(document.getElementById('mjJP').value);
                 const kelas_id=document.getElementById('mjKelas').value, mapel_id=document.getElementById('mjMapel').value, guru_id=document.getElementById('mjGuru').value;
@@ -2037,7 +2061,7 @@
             masterEditKey=key;
             if(masterTab==='guru'){const x=dbGuru.find(x=>x.id===key); document.getElementById('masterKode').value=x.id; document.getElementById('masterNama').value=x.nama; document.getElementById('masterMapelUtama').value=x.mapel_id||'';}
             else if(masterTab==='mapel'){const x=dbMapel.find(x=>x.id===key); document.getElementById('masterKode').value=x.id; document.getElementById('masterNama').value=x.nama;}
-            else if(masterTab==='kelas'){const x=dbKelas.find(x=>x.id===key); document.getElementById('masterKode').value=x.id; document.getElementById('masterNama').value=x.nama;}
+            else if(masterTab==='kelas'){const x=dbKelas.find(x=>x.id===key); document.getElementById('masterKode').value=x.id; document.getElementById('masterNama').value=x.nama; const w=document.getElementById('masterWaliKelas'); if(w) w.value=dbWaliKelas[key]||'';}
             else {const x=dbJadwal.find(x=>String(x.id)===String(key)); document.getElementById('masterKode').value=x.id; document.getElementById('mjHari').value=x.hari; document.getElementById('mjJP').value=x.jam_ke; document.getElementById('mjKelas').value=x.kelas_id; document.getElementById('mjMapel').value=x.mapel_id; document.getElementById('mjGuru').value=x.guru_id;}
         }
 
