@@ -32,7 +32,7 @@ async function login(){
  try{
   if(!sb) throw new Error('Koneksi aplikasi belum siap. Muat ulang halaman.');
   const kelas=document.getElementById('kelas').value,pin=document.getElementById('pin').value.trim();
-  if(!/^\\d{6}$/.test(pin)){msg.className='err';msg.textContent='PIN harus 6 angka.';return;}
+  if(!/^\d{6}$/.test(pin)){msg.className='err';msg.textContent='PIN harus 6 angka.';return;}
   btn.disabled=true;btn.textContent='Memeriksa...';msg.className='muted';msg.textContent='Menghubungkan ke SIKUR...';
   const {data,error}=await sb.rpc('sikur_login_ketua_kelas',{p_kelas:kelas,p_pin:pin});
   if(error) throw error;
