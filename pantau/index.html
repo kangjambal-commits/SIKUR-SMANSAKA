@@ -6,7 +6,7 @@
 </style></head><body><div class="wrap">
 <div class="brand"><div class="logo">PK</div><div><h1>PantauKBM</h1><div class="muted">Monitoring KBM • SMA Negeri 1 Karangreja • TA 2026/2027</div></div></div>
 <section id="login" class="card"><h2>Masuk Ketua Kelas</h2><p class="muted">Pilih kelas dan masukkan PIN 6 angka.</p>
-<div class="row"><div class="grow"><select id="kelas"></select></div><div class="grow"><input id="pin" inputmode="numeric" maxlength="6" placeholder="PIN 6 angka"></div></div>
+<div class="row"><div class="grow"><label class="muted" for="kelas">Kelas</label><select id="kelas"><option value="XI-A" selected>XI-A</option></select></div><div class="grow"><label class="muted" for="pin">PIN</label><input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="PIN 6 angka"></div></div>
 <div style="margin-top:10px"><button onclick="login()">Masuk</button></div><p id="loginMsg" class="muted"></p></section>
 <section id="app" class="hidden"><div class="card"><div class="row"><div class="grow"><h2 id="who"></h2><div id="date" class="muted"></div></div><div><button class="secondary" onclick="logout()">Keluar</button></div></div></div>
 <div id="list"></div></section>
@@ -16,7 +16,7 @@ const SB_URL='https://nmktzoyhgmpdmbegseaq.supabase.co';
 const SB_KEY='sb_publishable_8CUhwiz7SjqlAsiCpI0pog_aDccxojf';
 const sb=supabase.createClient(SB_URL,SB_KEY);
 const classes=['X-A','X-B','X-C','X-D','X-E','X-F','X-G','X-H','X-I','XI-A','XI-B','XI-C','XI-D','XI-E','XI-F','XI-G','XI-H','XI-I','XII-A','XII-B','XII-C','XII-D','XII-E','XII-F','XII-G','XII-H','XII-I'];
-document.getElementById('kelas').innerHTML=classes.map(x=>'<option>'+x+'</option>').join('');
+document.getElementById('kelas').innerHTML=classes.map(x=>'<option value="'+x+'"'+(x==='XI-A'?' selected':'')+'>'+x+'</option>').join('');
 let session=JSON.parse(localStorage.getItem('pantaukbm_session')||'null');
 const statuses=['Hadir','Terlambat','Belum Hadir','Meninggalkan Kelas Sebelum Selesai','Tidak Hadir','Guru Pengganti','Tugas Mandiri'];
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
