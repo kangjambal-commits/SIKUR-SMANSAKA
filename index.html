@@ -869,9 +869,11 @@
                 const {error}=await sb.from('sikur_wali_kelas').upsert({tahun_ajaran:'2026/2027',kelas:kelasId,kode_guru:kodeGuru,updated_at:new Date().toISOString()},{onConflict:'tahun_ajaran,kelas'});
                 if(error) throw error;
                 setSupabaseStatus(true,'Tersimpan');
+                return true;
             } catch(e) {
                 console.warn('Gagal menyimpan wali kelas ke Supabase',e);
                 setSupabaseStatus(false,'Wali kelas belum sinkron');
+                return false;
             }
         }
 
@@ -2018,7 +2020,7 @@
             }
         }
 
-        function saveMasterItem() {
+        async function saveMasterItem() {
             const kode=document.getElementById('masterKode').value.trim().toUpperCase();
             const nama=document.getElementById('masterNama').value.trim();
             if(masterTab==='guru'){
@@ -2038,7 +2040,8 @@
                 if(waliKode) {
                     if(masterEditKey && masterEditKey!==id) delete dbWaliKelas[masterEditKey];
                     dbWaliKelas[id]=waliKode;
-                    persistWaliKelasToSupabase(id,waliKode);
+                    const waliSaved=await persistWaliKelasToSupabase(id,waliKode);
+                    if(!waliSaved && supabaseReady) alert('Data kelas tersimpan lokal, tetapi Wali Kelas belum tersimpan ke Supabase. Jalankan SIKUR_03_RLS_WALI_KELAS.sql terlebih dahulu.');
                 }
             } else {
                 const hari=document.getElementById('mjHari').value, jp=Number(document.getElementById('mjJP').value);
