@@ -1287,42 +1287,69 @@
             }
         }
 
-        function handleAbsensiSubmit(e) {
+        async function handleAbsensiSubmit(e) {
             e.preventDefault();
+            if(!roleCanWriteOperational()) return alert('Akun ini tidak memiliki izin mencatat ketidakhadiran.');
             const tanggal = document.getElementById('absensiTanggal').value;
             const guruId = document.getElementById('absensiGuru').value;
             const alasan = document.getElementById('absensiAlasan').value;
-            const keterangan = document.getElementById('absensiKeterangan').value;
+            const keterangan = document.getElementById('absensiKeterangan').value.trim();
+            if(!tanggal || !guruId || !alasan) return alert('Tanggal, guru, dan alasan wajib diisi.');
 
-            // In real app, save to Supabase here.
-            stateKetidakhadiran.push({
+            const duplicate = stateKetidakhadiran.find(a => a.tanggal === tanggal && a.guru_id === guruId);
+            if(duplicate) return alert('Guru tersebut sudah tercatat tidak hadir pada tanggal yang sama.');
+
+            const record = {
                 id: 'A' + Date.now(),
-                tanggal: tanggal,
+                tanggal,
                 guru_id: guruId,
-                alasan: alasan,
-                keterangan: keterangan
-            });
-            persistOperationalData();
+                alasan,
+                keterangan
+            };
 
-            alert('Data ketidakhadiran berhasil disimpan.');
+            // Local-first: data tetap aman bila koneksi terputus.
+            stateKetidakhadiran.push(record);
+            localStorage.setItem('sikur_ketidakhadiran', JSON.stringify(stateKetidakhadiran));
+
+            let cloudSaved = false;
+            if(supabaseReady) {
+                try {
+                    const payload={id:String(record.id),tanggal:record.tanggal,kode_guru:record.guru_id,alasan:record.alasan,keterangan:record.keterangan||''};
+                    const {error}=await sb.from('sikur_ketidakhadiran').upsert(payload);
+                    if(error) throw error;
+                    cloudSaved = true;
+                    setSupabaseStatus(true,'Tersimpan');
+                } catch(err) {
+                    console.error('Gagal menyimpan ketidakhadiran:',err);
+                    setSupabaseStatus(false,'Belum sinkron');
+                }
+            }
+
+            alert(cloudSaved ? 'Data ketidakhadiran berhasil disimpan ke Supabase.' : 'Data tersimpan di perangkat ini. Belum tersinkron ke Supabase.');
             document.getElementById('formAbsensi').reset();
             loadAbsensiForm();
             document.getElementById('dampakTable').classList.add('hidden');
             document.getElementById('dampakEmptyState').classList.remove('hidden');
-            
-            // Refresh dashboard widgets
+
             updateDashboardAbsenceWidget();
+            renderAbsenceHistory();
+            renderPenggantiDashboard();
+            updateOperationalStats();
         }
 
         function updateDashboardAbsenceWidget() {
             const list = document.getElementById('dashboardAbsenceList');
             // Filter only today's absentees (mocking today as Date.now() representation in string for simple compare, but let's just show all recent)
-            if(stateKetidakhadiran.length === 0) {
+            const todayLocal = new Date();
+            const yyyy=todayLocal.getFullYear(), mm=String(todayLocal.getMonth()+1).padStart(2,'0'), dd=String(todayLocal.getDate()).padStart(2,'0');
+            const todayKey=`${yyyy}-${mm}-${dd}`;
+            const todayAbsences = stateKetidakhadiran.filter(a => a.tanggal === todayKey);
+            if(todayAbsences.length === 0) {
                  list.innerHTML = `<div class="text-center text-gray-400 py-4"><i class="ph ph-users-three text-3xl mb-2 block"></i>Semua guru hadir hari ini.</div>`;
                  return;
             }
 
-            list.innerHTML = stateKetidakhadiran.slice().reverse().map(a => {
+            list.innerHTML = todayAbsences.slice().reverse().map(a => {
                 const guru = dbGuru.find(g => g.id === a.guru_id);
                 return `
                 <div class="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-100">
