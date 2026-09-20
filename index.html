@@ -162,6 +162,11 @@
                         <i class="ph ph-users-three text-xl"></i> Guru Pengganti
                     </a>
                 </li>
+                <li>
+                    <a href="#" onclick="navigateTo('piket')" id="nav-piket" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors">
+                        <i class="ph ph-clipboard-text text-xl"></i> Guru Piket
+                    </a>
+                </li>
                 <li class="pt-4 pb-2 px-4 text-xs font-semibold text-blue-400 uppercase tracking-wider">
                     Master Data
                 </li>
@@ -561,6 +566,28 @@
 
             </section>
 
+            <!-- Guru Piket Section -->
+            <section id="sec-piket" class="hidden fade-in space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Guru Piket KBM</h2>
+                    <p class="text-sm text-gray-500 mt-1">Semester Ganjil TA 2026/2027 • Lampiran 14 SK Kepala SMA Negeri 1 Karangreja, 1 Juli 2026.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex flex-wrap gap-2 mb-4" id="piketDayTabs"></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[620px] text-sm">
+                            <thead class="bg-gray-100 text-xs uppercase text-gray-600">
+                                <tr><th class="p-3 text-center w-16">No.</th><th class="p-3 text-left">Jabatan</th><th class="p-3 text-left">Nama Guru</th><th class="p-3 text-left">Keterangan</th></tr>
+                            </thead>
+                            <tbody id="piketTableBody" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800">
+                    Data Guru Piket ini juga digunakan otomatis sebagai prioritas pada menu Guru Pengganti.
+                </div>
+            </section>
+
             <!-- Guru Pengganti Section -->
             <section id="sec-pengganti" class="hidden fade-in space-y-6">
                  <div>
@@ -952,7 +979,7 @@
 
         function navigateTo(sectionId) {
             // Hide all sections
-            const sections = ['dashboard', 'jadwal', 'beban', 'bentrok', 'absensi', 'pengganti', 'master'];
+            const sections = ['dashboard', 'jadwal', 'beban', 'bentrok', 'absensi', 'pengganti', 'piket', 'master'];
             sections.forEach(s => {
                 document.getElementById(`sec-${s}`).classList.add('hidden');
                 document.getElementById(`nav-${s}`).classList.remove('bg-blue-800', 'text-white', 'font-medium');
@@ -971,6 +998,7 @@
             if(sectionId === 'master') { renderMasterData(); showMasterTab(masterTab); }
             if(sectionId === 'absensi') { loadAbsensiForm(); renderAbsenceHistory(); }
             if(sectionId === 'pengganti') { renderPenggantiDashboard(); renderOperationalHistory(); updateOperationalStats(); }
+            if(sectionId === 'piket') renderGuruPiket();
 
             // Close sidebar on mobile after click
             if (window.innerWidth < 768) {
@@ -1500,7 +1528,7 @@
         }
 
         // Jadwal Piket KBM Semester Ganjil TA 2026/2027 (Lampiran 14 SK Kepala Sekolah, 1 Juli 2026).
-        // Nama yang belum ada di master guru (mis. Klino Hery Styawan) tidak masuk kandidat sampai tersedia di dbGuru.
+        // Drs. Klino Hery Styawan tidak dimasukkan karena sudah pensiun.
         const dbPiketKbm = {
             Senin: ['ARIEF','MUFID','YULIYA','ETI','ANISA','KATWANG','SAEFUL','AAS','LILIN','IIN','WIMBO','TARI'],
             Selasa: ['KHAMDAN','KRIS','MUFID','ISNANI','RINA','IRMA','HARDI','INDRA','FITRI','DWI','TOMO'],
@@ -1509,6 +1537,27 @@
             Jumat: ['AFIF','KRIS','MUFID','BULUD','WINDA','SUS','ARI','TITIN','LELA','SYIFA']
         };
         const dbGuruBkIds = new Set(['KRIS','MUFID','YULIYA']);
+
+        let selectedPiketDay = currentDay && dbPiketKbm[currentDay] ? currentDay : 'Senin';
+        function renderGuruPiket(day=selectedPiketDay) {
+            selectedPiketDay = dbPiketKbm[day] ? day : 'Senin';
+            const tabs=document.getElementById('piketDayTabs');
+            const body=document.getElementById('piketTableBody');
+            if(!tabs || !body) return;
+            const days=['Senin','Selasa','Rabu','Kamis','Jumat'];
+            tabs.innerHTML=days.map(d=>`<button onclick="renderGuruPiket('${d}')" class="px-3 py-2 rounded-lg text-sm font-semibold border ${d===selectedPiketDay?'bg-blue-600 text-white border-blue-600':'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}">${d}</button>`).join('');
+            const ids=dbPiketKbm[selectedPiketDay]||[];
+            body.innerHTML=ids.map((id,i)=>{
+                const guru=dbGuru.find(g=>g.id===id);
+                const isBk=dbGuruBkIds.has(id);
+                return `<tr>
+                    <td class="p-3 text-center">${i+1}</td>
+                    <td class="p-3 font-medium">${i===0?'Koordinator':'Anggota'}</td>
+                    <td class="p-3 font-semibold text-gray-800">${guru?.nama||id}</td>
+                    <td class="p-3">${isBk?'<span class="inline-flex px-2 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">Guru BK</span>':'<span class="text-gray-400">—</span>'}</td>
+                </tr>`;
+            }).join('');
+        }
 
         // CRUCIAL: Find Candidates logic as requested
         function findCandidates(jadwalId, tanggal) {
