@@ -140,6 +140,11 @@
                     </a>
                 </li>
                 <li>
+                    <a href="#" onclick="navigateTo('jadwal-saya')" id="nav-jadwal-saya" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors">
+                        <i class="ph ph-clock-user text-xl"></i> Jadwal Saya Hari Ini
+                    </a>
+                </li>
+                <li>
                     <a href="#" onclick="navigateTo('beban')" id="nav-beban" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors">
                         <i class="ph ph-chart-bar text-xl"></i> Beban Mengajar
                     </a>
@@ -672,11 +677,12 @@
 
 
             <section id="sec-jadwal-saya" class="hidden space-y-6">
-                <div><h2 class="text-xl font-bold text-gray-800">Jadwal Saya</h2><p class="text-sm text-gray-500">Jadwal mengajar berdasarkan akun guru yang sedang login.</p></div>
-                <div id="jadwalSayaInfo" class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900"></div>
-                <div class="bg-white rounded-xl border shadow-sm overflow-x-auto">
-                    <table class="w-full text-sm"><thead class="bg-gray-100 text-xs uppercase"><tr><th class="p-3">Hari</th><th class="p-3">JP</th><th class="p-3">Waktu</th><th class="p-3">Kelas</th><th class="p-3 text-left">Mapel</th></tr></thead><tbody id="jadwalSayaBody" class="divide-y"></tbody></table>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">Jadwal Saya Hari Ini</h2>
+                    <p class="text-sm text-gray-500">Jadwal mengajar pribadi berdasarkan akun yang sedang login.</p>
                 </div>
+                <div id="jadwalSayaInfo" class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900"></div>
+                <div id="jadwalSayaCards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
             </section>
 
             <section id="sec-agenda" class="hidden space-y-6">
@@ -980,7 +986,7 @@
 
         function navigateTo(sectionId) {
             // Hide all sections
-            const sections = ['dashboard', 'jadwal', 'beban', 'bentrok', 'absensi', 'pengganti', 'piket', 'master'];
+            const sections = ['dashboard', 'jadwal', 'jadwal-saya', 'beban', 'bentrok', 'absensi', 'pengganti', 'piket', 'master'];
             sections.forEach(s => {
                 document.getElementById(`sec-${s}`).classList.add('hidden');
                 document.getElementById(`nav-${s}`).classList.remove('bg-blue-800', 'text-white', 'font-medium');
@@ -994,6 +1000,7 @@
 
             // Trigger specific renders
             if(sectionId === 'jadwal') renderJadwal();
+            if(sectionId === 'jadwal-saya') renderJadwalSayaHariIni();
             if(sectionId === 'beban') renderBebanMengajar();
             if(sectionId === 'bentrok') runCollisionDetection();
             if(sectionId === 'master') { renderMasterData(); showMasterTab(masterTab); }
@@ -2608,14 +2615,38 @@
 
         function canManageCurriculumContent(){ return ['admin','waka'].includes(currentProfile?.role); }
 
-        function renderJadwalSaya(){
-            const info=document.getElementById('jadwalSayaInfo'), body=document.getElementById('jadwalSayaBody'); if(!body) return;
+        function renderJadwalSayaHariIni(){
+            const info=document.getElementById('jadwalSayaInfo'), cards=document.getElementById('jadwalSayaCards');
+            if(!info || !cards) return;
             const kode=currentProfile?.kode_guru;
-            if(!kode){info.innerHTML='Akun ini belum ditautkan ke <b>kode guru</b>. Admin/Waka perlu mengisi kode_guru pada profil pengguna.'; body.innerHTML='<tr><td colspan="5" class="p-6 text-center text-gray-400">Jadwal belum dapat ditampilkan.</td></tr>'; return;}
-            const rows=vSikurJadwalLengkap.filter(j=>j.guru_id===kode).sort((a,b)=>HARI_KERJA.indexOf(a.hari)-HARI_KERJA.indexOf(b.hari)||a.jam_ke-b.jam_ke);
-            info.innerHTML=`<b>${currentProfile.nama}</b> • Kode ${kode} • ${rows.length} JP/slot jadwal per minggu`;
-            body.innerHTML=rows.length?rows.map(j=>`<tr><td class="p-3 text-center">${j.hari}</td><td class="p-3 text-center">${j.jam_ke}</td><td class="p-3 text-center">${j.waktu_mulai}–${j.waktu_selesai}</td><td class="p-3 text-center font-medium">${j.kelas_nama}</td><td class="p-3">${j.mapel_nama}</td></tr>`).join(''):'<tr><td colspan="5" class="p-6 text-center text-gray-400">Tidak ada jadwal.</td></tr>';
+            if(!kode){
+                info.innerHTML='Akun ini belum ditautkan ke <b>kode guru</b>.';
+                cards.innerHTML='<div class="md:col-span-2 xl:col-span-3 bg-white border rounded-xl p-8 text-center text-gray-400">Jadwal pribadi belum dapat ditampilkan.</div>';
+                return;
+            }
+            const now=new Date();
+            const hari=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][now.getDay()];
+            const tanggal=now.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+            const rows=vSikurJadwalLengkap.filter(j=>j.guru_id===kode && j.hari===hari).sort((a,b)=>Number(a.jam_ke)-Number(b.jam_ke));
+            info.innerHTML=`<b>${currentProfile?.nama||kode}</b> • ${tanggal} • <b>${rows.length} JP</b>`;
+            if(!rows.length){
+                cards.innerHTML=`<div class="md:col-span-2 xl:col-span-3 bg-white border rounded-xl p-8 text-center text-gray-500"><i class="ph ph-calendar-check text-4xl text-green-500 block mb-2"></i>Tidak ada jadwal mengajar hari ini.</div>`;
+                return;
+            }
+            cards.innerHTML=rows.map((j,i)=>`
+                <div class="bg-white border rounded-xl p-4 shadow-sm border-l-4 border-l-blue-500">
+                    <div class="flex items-start justify-between gap-3">
+                        <div><span class="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded">JP ${j.jam_ke}</span><h3 class="font-bold text-lg text-gray-800 mt-3">Kelas ${j.kelas_nama}</h3><p class="text-sm text-gray-600 mt-1">${j.mapel_nama}</p></div>
+                        <i class="ph ph-chalkboard-teacher text-3xl text-blue-200"></i>
+                    </div>
+                    <div class="mt-4 pt-3 border-t flex items-center justify-between text-sm">
+                        <span class="font-semibold text-gray-700">${j.waktu_mulai}–${j.waktu_selesai}</span>
+                        <span class="text-xs text-gray-400">${i===0?'Jadwal pertama':''}</span>
+                    </div>
+                </div>`).join('');
         }
+
+        function renderJadwalSaya(){ renderJadwalSayaHariIni(); }
 
         function openAgendaForm(){ if(!canManageCurriculumContent()) return alert('Hanya Admin/Waka Kurikulum.'); document.getElementById('agendaForm').classList.toggle('hidden'); }
         function saveAgenda(){
@@ -2656,14 +2687,8 @@
         async function copyRoomWA(id){const r=stateRoomChanges.find(x=>x.id===id);if(!r)return;const t=`INFORMASI PERUBAHAN RUANG\n\nTanggal: ${formatDateID(r.tanggal)}\nKelas: ${r.kelas}\nRuang sementara: ${r.ruang}\nKeterangan: ${r.alasan||'-'}\n\nMohon menjadi perhatian. Terima kasih.`;await navigator.clipboard.writeText(t);alert('Informasi perubahan ruang disalin.');}
         function deleteRoom(id){if(!confirm('Hapus perubahan ruang?'))return;stateRoomChanges=stateRoomChanges.filter(x=>x.id!==id);localStorage.setItem('sikur_ruang',JSON.stringify(stateRoomChanges));renderRoomChanges();}
 
-        const _showSectionV22=showSection;
-        showSection=function(sectionId){
-            _showSectionV22(sectionId);
-            if(sectionId==='jadwal-saya')renderJadwalSaya();
-            if(sectionId==='agenda')renderAgenda();
-            if(sectionId==='pengumuman')renderAnnouncements();
-            if(sectionId==='ruang')renderRoomChanges();
-        };
+        // Compatibility helper for older module links.
+        function showSection(sectionId){ navigateTo(sectionId); }
 
         const _applyRoleUIV22=applyRoleUI;
         applyRoleUI=function(){
