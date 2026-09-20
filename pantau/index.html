@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PantauKBM SMANSAKA</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>PantauKBM SMANSAKA</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Arial;background:#f4f7fb;color:#172033}.wrap{max-width:720px;margin:auto;padding:18px}.brand{display:flex;gap:12px;align-items:center;margin:8px 0 20px}.logo{width:52px;height:52px;border-radius:14px;background:#1d4ed8;color:white;display:grid;place-items:center;font-weight:800}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 4px 16px #0f172a0d}h1{font-size:21px;margin:0}h2{font-size:17px;margin:0 0 8px}.muted{color:#64748b;font-size:13px}.row{display:flex;gap:10px;flex-wrap:wrap}.grow{flex:1;min-width:150px}select,input,textarea,button{width:100%;font:inherit;border-radius:11px;border:1px solid #cbd5e1;padding:11px}button{border:0;background:#1d4ed8;color:white;font-weight:700;cursor:pointer}.secondary{background:#eef2ff;color:#3730a3}.danger{background:#fff1f2;color:#be123c}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:700}.jp{font-weight:800;color:#1d4ed8}.hidden{display:none}.statusgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.statusgrid button{background:#f8fafc;color:#334155;border:1px solid #dbe3ee;font-size:13px;padding:10px}.statusgrid button.sel{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.detail{margin-top:12px;padding-top:12px;border-top:1px solid #edf2f7}.ok{color:#047857;font-weight:700}.err{color:#b91c1c;font-weight:700}@media(max-width:520px){.wrap{padding:12px}.statusgrid{grid-template-columns:1fr}.card{border-radius:15px;padding:15px}}
 </style></head><body><div class="wrap">
@@ -14,12 +14,24 @@
 </div><script>
 const SB_URL='https://nmktzoyhgmpdmbegseaq.supabase.co';
 const SB_KEY='sb_publishable_8CUhwiz7SjqlAsiCpI0pog_aDccxojf';
-let sb=null;
-try{
-  if(!window.supabase || !window.supabase.createClient) throw new Error('Komponen koneksi belum termuat. Muat ulang halaman.');
-  sb=window.supabase.createClient(SB_URL,SB_KEY);
-}catch(e){
-  window.addEventListener('DOMContentLoaded',()=>{const m=document.getElementById('loginMsg');if(m){m.className='err';m.textContent=e.message;}});
+async function rpc(fn,args){
+  const res=await fetch(SB_URL+'/rest/v1/rpc/'+fn,{
+    method:'POST',
+    headers:{
+      'apikey':SB_KEY,
+      'Authorization':'Bearer '+SB_KEY,
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify(args||{})
+  });
+  let data=null;
+  const txt=await res.text();
+  try{data=txt?JSON.parse(txt):null}catch(_){data=txt}
+  if(!res.ok){
+    const message=(data&&data.message)||('HTTP '+res.status);
+    return {data:null,error:{message}};
+  }
+  return {data,error:null};
 }
 const classes=['X-A','X-B','X-C','X-D','X-E','X-F','X-G','X-H','X-I','XI-A','XI-B','XI-C','XI-D','XI-E','XI-F','XI-G','XI-H','XI-I','XII-A','XII-B','XII-C','XII-D','XII-E','XII-F','XII-G','XII-H','XII-I'];
 document.getElementById('kelas').innerHTML=classes.map(x=>'<option value="'+x+'"'+(x==='XI-A'?' selected':'')+'>'+x+'</option>').join('');
@@ -30,11 +42,10 @@ function fmt(t){return t?String(t).slice(0,5):'-'}
 async function login(){
  const msg=document.getElementById('loginMsg'),btn=document.getElementById('btnMasuk');
  try{
-  if(!sb) throw new Error('Koneksi aplikasi belum siap. Muat ulang halaman.');
   const kelas=document.getElementById('kelas').value,pin=document.getElementById('pin').value.trim();
   if(!/^\d{6}$/.test(pin)){msg.className='err';msg.textContent='PIN harus 6 angka.';return;}
   btn.disabled=true;btn.textContent='Memeriksa...';msg.className='muted';msg.textContent='Menghubungkan ke SIKUR...';
-  const {data,error}=await sb.rpc('sikur_login_ketua_kelas',{p_kelas:kelas,p_pin:pin});
+  const {data,error}=await rpc('sikur_login_ketua_kelas',{p_kelas:kelas,p_pin:pin});
   if(error) throw error;
   if(!data?.length) throw new Error('Kelas/PIN tidak cocok.');
   session=data[0];localStorage.setItem('pantaukbm_session',JSON.stringify(session));await openApp();
@@ -42,14 +53,14 @@ async function login(){
  finally{btn.disabled=false;btn.textContent='Masuk';}
 }
 async function openApp(){if(!session)return;document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('who').textContent=session.nama_ketua+' • '+session.kelas;document.getElementById('date').textContent=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:'Asia/Jakarta'}).format(new Date());await load()}
-async function load(){const box=document.getElementById('list');box.innerHTML='<div class="card muted">Memuat jadwal hari ini...</div>';const {data,error}=await sb.rpc('sikur_jadwal_ketua_hari_ini',{p_token:session.token});if(error){box.innerHTML='<div class="card err">'+esc(error.message)+'</div>';return}
+async function load(){const box=document.getElementById('list');box.innerHTML='<div class="card muted">Memuat jadwal hari ini...</div>';const {data,error}=await rpc('sikur_jadwal_ketua_hari_ini',{p_token:session.token});if(error){box.innerHTML='<div class="card err">'+esc(error.message)+'</div>';return}
 if(!data?.length){box.innerHTML='<div class="card muted">Tidak ada jadwal KBM untuk kelas ini hari ini.</div>';return}
 box.innerHTML=data.map(r=>`<div class="card" id="j${r.jadwal_id}"><div class="row"><div class="grow"><span class="jp">JP ${r.jam_ke}</span> <span class="badge">${fmt(r.mulai)}–${fmt(r.selesai)}</span><h2 style="margin-top:8px">${esc(r.nama_mapel)}</h2><div class="muted">${esc(r.nama_guru)}</div></div><div>${r.status_laporan?'<span class="badge">'+esc(r.status_laporan)+'</span>':''}</div></div>
 <div class="statusgrid">${statuses.map(s=>`<button class="${r.status_laporan===s?'sel':''}" onclick="choose(${r.jadwal_id},'${s.replace(/'/g,"\\'")}')">${esc(s)}</button>`).join('')}</div>
 <div class="detail hidden" id="d${r.jadwal_id}"><div class="row"><div class="grow"><label class="muted">Jam masuk</label><input type="time" id="in${r.jadwal_id}" value="${fmt(r.jam_masuk)==='-'?'':fmt(r.jam_masuk)}"></div><div class="grow"><label class="muted">Jam keluar</label><input type="time" id="out${r.jadwal_id}" value="${fmt(r.jam_keluar)==='-'?'':fmt(r.jam_keluar)}"></div></div><div style="margin-top:8px"><textarea id="ket${r.jadwal_id}" maxlength="500" rows="2" placeholder="Keterangan faktual (opsional)">${esc(r.keterangan||'')}</textarea></div><div style="margin-top:8px"><button onclick="save(${r.jadwal_id})">Kirim Laporan</button></div><div id="m${r.jadwal_id}" class="muted"></div></div></div>`).join('')}
 }
 let selected={};function choose(id,s){selected[id]=s;document.getElementById('d'+id).classList.remove('hidden');document.querySelectorAll('#j'+id+' .statusgrid button').forEach(b=>b.classList.toggle('sel',b.textContent===s))}
-async function save(id){const status=selected[id];if(!status)return;const m=document.getElementById('m'+id);m.textContent='Mengirim...';const args={p_token:session.token,p_jadwal_id:id,p_status:status,p_jam_masuk:document.getElementById('in'+id).value||null,p_jam_keluar:document.getElementById('out'+id).value||null,p_keterangan:document.getElementById('ket'+id).value||null};const {error}=await sb.rpc('sikur_lapor_kbm',args);if(error){m.className='err';m.textContent=error.message;return}m.className='ok';m.textContent='Laporan tersimpan.';setTimeout(load,500)}
+async function save(id){const status=selected[id];if(!status)return;const m=document.getElementById('m'+id);m.textContent='Mengirim...';const args={p_token:session.token,p_jadwal_id:id,p_status:status,p_jam_masuk:document.getElementById('in'+id).value||null,p_jam_keluar:document.getElementById('out'+id).value||null,p_keterangan:document.getElementById('ket'+id).value||null};const {error}=await rpc('sikur_lapor_kbm',args);if(error){m.className='err';m.textContent=error.message;return}m.className='ok';m.textContent='Laporan tersimpan.';setTimeout(load,500)}
 function logout(){localStorage.removeItem('pantaukbm_session');session=null;location.reload()}
 document.getElementById('btnMasuk').addEventListener('click',login);
 document.getElementById('pin').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
