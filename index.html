@@ -952,19 +952,19 @@
             const statsHtml = `
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-blue-500">
                     <div class="bg-blue-50 p-2 rounded-lg text-blue-600"><i class="ph ph-chalkboard-teacher text-2xl"></i></div>
-                    <div><p class="text-xs text-gray-500 font-medium">Jumlah Guru</p><p class="text-xl font-bold">${dbGuru.length}</p></div>
+                    <div><p class="text-xs text-gray-500 font-medium">Jumlah Guru</p><p class="text-xl font-bold">${dbGuru.length} <span class="text-sm font-medium text-gray-500">orang</span></p></div>
                 </div>
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-green-500">
                     <div class="bg-green-50 p-2 rounded-lg text-green-600"><i class="ph ph-users-three text-2xl"></i></div>
-                    <div><p class="text-xs text-gray-500 font-medium">Jumlah Kelas</p><p class="text-xl font-bold">${dbKelas.length}</p></div>
+                    <div><p class="text-xs text-gray-500 font-medium">Jumlah Kelas</p><p class="text-xl font-bold">${dbKelas.length} <span class="text-sm font-medium text-gray-500">rombel</span></p></div>
                 </div>
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-purple-500">
                     <div class="bg-purple-50 p-2 rounded-lg text-purple-600"><i class="ph ph-book-open text-2xl"></i></div>
-                    <div><p class="text-xs text-gray-500 font-medium">Mata Pelajaran</p><p class="text-xl font-bold">${dbMapel.length}</p></div>
+                    <div><p class="text-xs text-gray-500 font-medium">Mata Pelajaran</p><p class="text-xl font-bold">${dbMapel.length} <span class="text-sm font-medium text-gray-500">mapel</span></p><p class="text-[10px] text-gray-400">per jenjang</p></div>
                 </div>
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-orange-500">
                     <div class="bg-orange-50 p-2 rounded-lg text-orange-600"><i class="ph ph-clock text-2xl"></i></div>
-                    <div><p class="text-xs text-gray-500 font-medium">Slot Jadwal</p><p class="text-xl font-bold">${vSikurJadwalLengkap.length}</p></div>
+                    <div><p class="text-xs text-gray-500 font-medium">Slot Jadwal</p><p class="text-xl font-bold">${vSikurJadwalLengkap.length} <span class="text-sm font-medium text-gray-500">slot</span></p></div>
                 </div>
             `;
             document.getElementById('dashboardStats').innerHTML = statsHtml;
