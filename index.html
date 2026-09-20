@@ -1526,6 +1526,11 @@
                     </div>
                 </div>
             `}).join('');
+
+            // Langsung tampilkan rekomendasi untuk slot pertama yang belum memiliki pengganti.
+            // Pengguna tetap dapat memilih JP lain dari daftar jadwal terdampak.
+            const firstPending = jadwalTerdampak.find(j => !statePengganti.some(p => String(p.jadwal_id)===String(j.id) && p.tanggal===a.tanggal));
+            if(firstPending) findCandidates(firstPending.id, a.tanggal);
         }
 
         // Jadwal Piket KBM Semester Ganjil TA 2026/2027 (Lampiran 14 SK Kepala Sekolah, 1 Juli 2026).
@@ -2896,9 +2901,6 @@
         const _deleteMasterV24=deleteMaster;
         deleteMaster=function(key){const r=_deleteMasterV24(key);setTimeout(()=>persistMasterSnapshotToSupabase(),0);return r;};
 
-        // Operational deletions must also remove remote rows.
-        const _deleteAbsenceV24=deleteAbsence;
-        deleteAbsence=async function(id){if(!confirm('Hapus data ketidakhadiran ini beserta penugasan penggantinya?'))return;await deleteAbsenceFromSupabase(id);const linked=statePengganti.filter(x=>String(x.absensi_id||'')===String(id));for(const p of linked)await deleteSubstituteFromSupabase(p.id);stateKetidakhadiran=stateKetidakhadiran.filter(x=>String(x.id)!==String(id));statePengganti=statePengganti.filter(x=>String(x.absensi_id||'')!==String(id));persistOperationalData();renderAbsenceHistory();renderOperationalHistory();updateOperationalStats();};
 
         window.addEventListener('load',()=>setTimeout(()=>{addV24Controls(); if(currentProfile)applyRoleUI();},800));
 
