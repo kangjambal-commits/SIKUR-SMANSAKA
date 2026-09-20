@@ -1498,19 +1498,42 @@
             `).join('');
         }
 
-        function tetapkanPengganti(jadwalId, guruPenggantiId, tanggal) {
+        async function tetapkanPengganti(jadwalId, guruPenggantiId, tanggal) {
+            if(!roleCanWriteOperational()) return alert('Akun ini tidak memiliki izin menetapkan guru pengganti.');
             const jTarget = vSikurJadwalLengkap.find(j => j.id === jadwalId);
-            
-            // Simpan ke state mockup database
-            statePengganti.push({
+            if(!jTarget) return alert('Slot jadwal tidak ditemukan.');
+
+            const duplicate = statePengganti.find(p => Number(p.jadwal_id) === Number(jadwalId) && p.tanggal === tanggal);
+            if(duplicate) return alert('Slot ini sudah memiliki guru pengganti. Sinkronkan data bila tampilan belum diperbarui.');
+
+            const record = {
                 id: 'P' + Date.now(),
                 jadwal_id: jadwalId,
                 guru_pengganti_id: guruPenggantiId,
                 tanggal: tanggal,
                 hari: jTarget.hari,
                 jam_ke: jTarget.jam_ke
-            });
-            persistOperationalData();
+            };
+
+            // Simpan lokal lebih dulu agar tetap aman saat koneksi terputus.
+            statePengganti.push(record);
+            localStorage.setItem('sikur_pengganti', JSON.stringify(statePengganti));
+
+            // Simpan ke cloud dan beri status yang jelas.
+            let cloudSaved = false;
+            if(supabaseReady) {
+                try {
+                    const payload={id:String(record.id),jadwal_id:Number(record.jadwal_id),kode_guru_pengganti:record.guru_pengganti_id,tanggal:record.tanggal,hari:record.hari,jam_ke:Number(record.jam_ke)};
+                    const {error}=await sb.from('sikur_pengganti').upsert(payload);
+                    if(error) throw error;
+                    cloudSaved = true;
+                    setSupabaseStatus(true,'Tersimpan');
+                } catch(e) {
+                    console.error('Gagal menyimpan guru pengganti:',e);
+                    setSupabaseStatus(false,'Belum sinkron');
+                    alert('Penugasan tersimpan di perangkat ini, tetapi belum berhasil disinkronkan ke Supabase. Gunakan tombol Sinkron setelah koneksi normal.');
+                }
+            }
 
             // Refresh UI
             // Find which absensi triggered this to pass ID back for refresh
@@ -1522,6 +1545,7 @@
                 <div class="h-full flex flex-col items-center justify-center text-green-500 fade-in">
                     <i class="ph ph-check-circle text-5xl mb-2"></i>
                     <p class="font-medium text-gray-700">Guru pengganti ditetapkan</p>
+                    <p class="text-xs mt-1 ${cloudSaved ? 'text-green-600' : 'text-amber-600'}">${cloudSaved ? 'Tersimpan di Supabase' : 'Tersimpan lokal • belum sinkron'}</p>
                     <button onclick="generateWAAnnouncement(${jadwalId}, '${guruPenggantiId}', '${tanggal}')" class="mt-4 flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">
                         <i class="ph ph-whatsapp-logo"></i> Buat Pengumuman WA
                     </button>
