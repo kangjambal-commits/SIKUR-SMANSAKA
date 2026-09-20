@@ -2253,14 +2253,36 @@
             try { return new Date(s+'T12:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}); } catch(e){ return s; }
         }
 
-        function deleteAbsence(id) {
+        async function deleteAbsence(id) {
+            if(!roleCanWriteOperational()) return alert('Akun ini tidak memiliki izin menghapus ketidakhadiran.');
             const abs=stateKetidakhadiran.find(a=>String(a.id)===String(id)); if(!abs) return;
             const linked=getAffectedForAbsence(abs).map(j=>String(j.id));
-            const subCount=statePengganti.filter(p=>p.tanggal===abs.tanggal && linked.includes(String(p.jadwal_id))).length;
-            if(!confirm(`Hapus catatan ketidakhadiran ini${subCount?` beserta ${subCount} penugasan pengganti terkait`:''}?`)) return;
+            const linkedSubs=statePengganti.filter(p=>p.tanggal===abs.tanggal && linked.includes(String(p.jadwal_id)));
+            if(!confirm(`Hapus catatan ketidakhadiran ini${linkedSubs.length?` beserta ${linkedSubs.length} penugasan pengganti terkait`:''}?`)) return;
+
+            // Hapus di Supabase lebih dulu. Jika gagal, jangan menghilangkan data hanya dari layar
+            // karena sinkronisasi berikutnya akan memunculkannya kembali.
+            if(supabaseReady) {
+                try {
+                    for(const p of linkedSubs) {
+                        const {error}=await sb.from('sikur_pengganti').delete().eq('id',String(p.id));
+                        if(error) throw error;
+                    }
+                    const {error}=await sb.from('sikur_ketidakhadiran').delete().eq('id',String(id));
+                    if(error) throw error;
+                } catch(e) {
+                    console.error('Gagal menghapus ketidakhadiran dari Supabase:',e);
+                    setSupabaseStatus(false,'Gagal menghapus');
+                    return alert('Data belum terhapus dari Supabase: '+(e.message||e));
+                }
+            }
+
             stateKetidakhadiran=stateKetidakhadiran.filter(a=>String(a.id)!==String(id));
             statePengganti=statePengganti.filter(p=>!(p.tanggal===abs.tanggal && linked.includes(String(p.jadwal_id))));
-            persistOperationalData(); renderAbsenceHistory(); updateDashboardStats(); updateOperationalStats(); renderPenggantiDashboard();
+            localStorage.setItem('sikur_ketidakhadiran',JSON.stringify(stateKetidakhadiran));
+            localStorage.setItem('sikur_pengganti',JSON.stringify(statePengganti));
+            renderAbsenceHistory(); updateDashboardStats(); updateOperationalStats(); renderPenggantiDashboard(); renderOperationalHistory();
+            setSupabaseStatus(true,'Tersimpan');
         }
 
         function renderOperationalHistory() {
@@ -2277,10 +2299,17 @@
             updateOperationalStats();
         }
 
-        function deleteAssignment(id) {
+        async function deleteAssignment(id) {
+            if(!roleCanWriteOperational()) return alert('Akun ini tidak memiliki izin menghapus penugasan.');
             if(!confirm('Hapus penugasan guru pengganti ini?')) return;
+            if(supabaseReady) {
+                const {error}=await sb.from('sikur_pengganti').delete().eq('id',String(id));
+                if(error) return alert('Penugasan belum terhapus dari Supabase: '+error.message);
+            }
             statePengganti=statePengganti.filter(p=>String(p.id)!==String(id));
-            persistOperationalData(); renderOperationalHistory(); renderPenggantiDashboard(); updateDashboardStats();
+            localStorage.setItem('sikur_pengganti',JSON.stringify(statePengganti));
+            renderOperationalHistory(); renderPenggantiDashboard(); updateDashboardStats(); updateOperationalStats();
+            setSupabaseStatus(true,'Tersimpan');
         }
 
         function showAssignmentWA(id) {
