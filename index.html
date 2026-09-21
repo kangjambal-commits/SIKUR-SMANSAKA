@@ -1080,7 +1080,7 @@
             ].map(x=>'<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100"><div class="text-xs text-gray-500"><i class="ph '+x[2]+'"></i> '+x[0]+'</div><div class="text-2xl font-bold mt-1">'+x[1]+'</div></div>').join('');
             if(!rows.length){body.innerHTML='<tr><td colspan="8" class="p-8 text-center text-gray-500">Belum ada laporan KBM untuk tanggal/kelas ini.</td></tr>';msg.textContent='0 laporan';return;}
             body.innerHTML=rows.map(r=>'<tr>'+
-              '<td class="p-3 font-semibold whitespace-nowrap">JAM PEMBELAJARAN KE-'+monitoringEsc(r.jam_ke)+'</td>'+
+              '<td class="p-3 font-semibold whitespace-nowrap">JP-'+monitoringEsc(r.jam_ke)+'</td>'+
               '<td class="p-3">'+monitoringEsc(r.kelas)+'</td>'+
               '<td class="p-3">'+monitoringEsc(guruMap[r.kode_guru]||r.kode_guru)+'</td>'+
               '<td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-semibold bg-slate-100">'+monitoringEsc(r.status_laporan)+'</span></td>'+
