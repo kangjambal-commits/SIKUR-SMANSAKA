@@ -75,7 +75,10 @@ async function loadTest(){
 }
 function testChoose(el){el.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');}
 let selected={};function choose(id,s){selected[id]=s;document.getElementById('d'+id).classList.remove('hidden');document.querySelectorAll('#j'+id+' .statusgrid button').forEach(b=>b.classList.toggle('sel',b.textContent===s))}
-async function save(id){const status=selected[id];if(!status)return;const m=document.getElementById('m'+id);m.textContent='Mengirim...';const args={p_token:session.token,p_jadwal_id:id,p_status:status,p_jam_masuk:document.getElementById('in'+id).value||null,p_jam_keluar:document.getElementById('out'+id).value||null,p_keterangan:document.getElementById('ket'+id).value||null};const {error}=await rpc('sikur_lapor_kbm',args);if(error){m.className='err';m.textContent=error.message;return}m.className='ok';m.textContent='Laporan tersimpan.';setTimeout(load,500)}
+async function save(id){const status=selected[id];if(!status)return;
+if((status==='Terlambat')&&!document.getElementById('in'+id).value){document.getElementById('m'+id).className='err';document.getElementById('m'+id).textContent='Isi jam masuk untuk status Terlambat.';return}
+if((status==='Meninggalkan Kelas Sebelum Selesai')&&!document.getElementById('out'+id).value){document.getElementById('m'+id).className='err';document.getElementById('m'+id).textContent='Isi jam keluar untuk status Meninggalkan Kelas Sebelum Selesai.';return}
+const m=document.getElementById('m'+id);if(!confirm('Kirim laporan JAM PEMBELAJARAN ini dengan status “'+status+'”?'))return;m.className='muted';m.textContent='Mengirim...';const args={p_token:session.token,p_jadwal_id:id,p_status:status,p_jam_masuk:document.getElementById('in'+id).value||null,p_jam_keluar:document.getElementById('out'+id).value||null,p_keterangan:document.getElementById('ket'+id).value||null};const {error}=await rpc('sikur_lapor_kbm',args);if(error){m.className='err';m.textContent=error.message;return}m.className='ok';m.textContent='Laporan tersimpan di SIKUR.';setTimeout(load,900)}
 function logout(){localStorage.removeItem('pantaukbm_session');session=null;location.reload()}
 document.getElementById('btnMasuk').addEventListener('click',login);
 document.getElementById('btnTest').addEventListener('click',loadTest);
