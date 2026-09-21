@@ -1148,7 +1148,7 @@
                 document.getElementById('dashboardScheduleEmpty').classList.add('hidden');
                 tbody.innerHTML = todaySched.map(j => `
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">JAM PEMBELAJARAN KE-${j.jam_ke}</td>
+                        <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">JP-${j.jam_ke}</td>
                         <td class="px-4 py-3 text-gray-500">${j.waktu_mulai} - ${j.waktu_selesai}</td>
                         <td class="px-3 sm:px-4 py-3 font-medium min-w-[100px]"><span class="inline-block bg-gray-100 px-2.5 py-1 rounded text-gray-700 whitespace-nowrap">${j.kelas_nama}</span></td>
                         <td class="px-4 py-3">${j.mapel_nama}</td>
