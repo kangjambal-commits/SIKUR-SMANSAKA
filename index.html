@@ -281,7 +281,7 @@
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 lg:col-span-2 flex flex-col h-96">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-bold text-gray-800 flex items-center gap-2">
-                                <i class="ph ph-calendar-check text-blue-500 text-xl"></i> Jadwal Hari Ini
+                                <i class="ph ph-calendar-check text-blue-500 text-xl"></i> Jadwal KBM Hari Ini <span id="dashboardScheduleCount" class="text-xs font-normal text-gray-400"></span>
                             </h3>
                             <span class="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded" id="todayScheduleDay">Senin</span>
                         </div>
@@ -1133,11 +1133,18 @@
             // Load Today's Schedule (showing a subset for UI purposes, e.g., current active ones, mocked as top 10)
             const todaySched = vSikurJadwalLengkap.filter(j => j.hari === currentDay).sort((a,b) => (a.jam_ke - b.jam_ke) || String(a.kelas_nama).localeCompare(String(b.kelas_nama),'id'));
             const tbody = document.getElementById('dashboardScheduleBody');
+            const emptyBox = document.getElementById('dashboardScheduleEmpty');
+            const countLabel = document.getElementById('dashboardScheduleCount');
+            if(countLabel) countLabel.textContent = '(' + todaySched.length + ' slot)';
+            tbody.innerHTML = '';
+            emptyBox.classList.add('hidden');
+            emptyBox.classList.remove('flex');
             
             if(todaySched.length === 0) {
                 document.getElementById('dashboardScheduleEmpty').classList.remove('hidden');
                 document.getElementById('dashboardScheduleEmpty').classList.add('flex');
             } else {
+                document.getElementById('dashboardScheduleEmpty').classList.add('hidden');
                 tbody.innerHTML = todaySched.map(j => `
                     <tr class="hover:bg-gray-50">
                         <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">JAM PEMBELAJARAN KE-${j.jam_ke}</td>
@@ -1505,9 +1512,7 @@
         function updateDashboardAbsenceWidget() {
             const list = document.getElementById('dashboardAbsenceList');
             // Filter only today's absentees (mocking today as Date.now() representation in string for simple compare, but let's just show all recent)
-            const todayLocal = new Date();
-            const yyyy=todayLocal.getFullYear(), mm=String(todayLocal.getMonth()+1).padStart(2,'0'), dd=String(todayLocal.getDate()).padStart(2,'0');
-            const todayKey=`${yyyy}-${mm}-${dd}`;
+            const todayKey = monitoringTodayWIB();
             const todayAbsences = stateKetidakhadiran.filter(a => a.tanggal === todayKey);
             if(todayAbsences.length === 0) {
                  list.innerHTML = `<div class="text-center text-gray-400 py-4"><i class="ph ph-users-three text-3xl mb-2 block"></i>Semua guru hadir hari ini.</div>`;
