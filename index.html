@@ -595,7 +595,7 @@
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[1050px] text-sm">
                             <thead class="bg-gray-100 text-xs uppercase text-gray-600"><tr>
-                                <th class="p-3 text-left">Jam Pembelajaran</th><th class="p-3 text-left">Kelas</th><th class="p-3 text-left">Guru</th><th class="p-3 text-left">Status Laporan</th><th class="p-3 text-left">Jam Masuk</th><th class="p-3 text-left">Jam Keluar</th><th class="p-3 text-left">Keterangan</th><th class="p-3 text-left">Verifikasi</th>
+                                <th class="p-3 text-left">Jam Pembelajaran</th><th class="p-3 text-left">Kelas</th><th class="p-3 text-left">Guru</th><th class="p-3 text-left">Status Laporan</th><th class="p-3 text-left">Jam Masuk</th><th class="p-3 text-left">Jam Keluar</th><th class="p-3 text-left">Keterangan</th><th class="p-3 text-left">Verifikasi Waka/Admin</th>
                             </tr></thead>
                             <tbody id="monitoringBody" class="divide-y divide-gray-100"></tbody>
                         </table>
@@ -1083,9 +1083,21 @@
               '<td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-semibold bg-slate-100">'+monitoringEsc(r.status_laporan)+'</span></td>'+
               '<td class="p-3">'+monitoringTime(r.jam_masuk)+'</td><td class="p-3">'+monitoringTime(r.jam_keluar)+'</td>'+
               '<td class="p-3 max-w-xs">'+monitoringEsc(r.keterangan||'-')+'<div class="text-[10px] text-gray-400 mt-1">Pelapor: '+monitoringEsc(r.pelapor_nama||'-')+'</div></td>'+
-              '<td class="p-3"><span class="text-xs font-semibold '+(r.status_verifikasi==='Perlu Verifikasi'?'text-amber-700':'text-green-700')+'">'+monitoringEsc(r.status_verifikasi||'Perlu Verifikasi')+'</span></td>'+
+              '<td class="p-3 min-w-[260px]"><select id="mv-status-'+r.id+'" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-xs">'+['Perlu Verifikasi','Normal','Tugas Kedinasan','Tugas Sekolah','Rapat KS','Izin','Sakit','Tanpa Keterangan','Sudah Ditindaklanjuti'].map(s=>'<option '+(s===r.status_verifikasi?'selected':'')+'>'+s+'</option>').join('')+'</select><input id="mv-note-'+r.id+'" value="'+monitoringEsc(r.catatan_verifikasi||'')+'" placeholder="Catatan verifikasi (opsional)" class="w-full mt-2 border border-gray-300 rounded-lg px-2 py-2 text-xs"><button onclick="saveMonitoringVerification('+r.id+')" class="mt-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">Simpan Verifikasi</button><div id="mv-msg-'+r.id+'" class="text-[10px] mt-1"></div></td>'+
               '</tr>').join('');
             msg.textContent=rows.length+' laporan';
+        }
+
+        async function saveMonitoringVerification(id){
+            const status=document.getElementById('mv-status-'+id).value;
+            const note=document.getElementById('mv-note-'+id).value;
+            const msg=document.getElementById('mv-msg-'+id);
+            if(!sb||!supabaseReady){msg.className='text-[10px] mt-1 text-red-600';msg.textContent='Supabase belum terhubung.';return;}
+            msg.className='text-[10px] mt-1 text-gray-500';msg.textContent='Menyimpan…';
+            const {error}=await sb.rpc('sikur_verifikasi_monitoring_kbm',{p_id:id,p_status_verifikasi:status,p_catatan:note||null});
+            if(error){msg.className='text-[10px] mt-1 text-red-600';msg.textContent=error.message;return;}
+            msg.className='text-[10px] mt-1 text-green-700';msg.textContent='Verifikasi tersimpan.';
+            setTimeout(renderMonitoringKBM,700);
         }
 
         // ==========================================
