@@ -168,6 +168,11 @@
                     </a>
                 </li>
                 <li>
+                    <a href="#" onclick="navigateTo('monitoring')" id="nav-monitoring" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors">
+                        <i class="ph ph-monitor-play text-xl"></i> Monitoring KBM
+                    </a>
+                </li>
+                <li>
                     <a href="#" onclick="navigateTo('piket')" id="nav-piket" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors">
                         <i class="ph ph-clipboard-text text-xl"></i> Guru Piket
                     </a>
@@ -569,6 +574,33 @@
                     </div>
                 </div>
 
+            </section>
+
+            <!-- Monitoring KBM Section -->
+            <section id="sec-monitoring" class="hidden fade-in space-y-6">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Monitoring KBM</h2>
+                        <p class="text-sm text-gray-500 mt-1">Laporan faktual ketua kelas • TA 2026/2027. Status ketidakhadiran tetap memerlukan verifikasi Waka/Admin.</p>
+                    </div>
+                    <button onclick="renderMonitoringKBM()" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"><i class="ph ph-arrows-clockwise"></i> Muat Ulang</button>
+                </div>
+                <div id="monitoringStats" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex flex-wrap gap-3 items-center">
+                        <input id="monitoringDate" type="date" class="border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="renderMonitoringKBM()">
+                        <select id="monitoringClass" class="border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="renderMonitoringKBM()"><option value="">Semua Kelas</option></select>
+                        <span id="monitoringMsg" class="text-xs text-gray-500"></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[1050px] text-sm">
+                            <thead class="bg-gray-100 text-xs uppercase text-gray-600"><tr>
+                                <th class="p-3 text-left">Jam Pembelajaran</th><th class="p-3 text-left">Kelas</th><th class="p-3 text-left">Guru</th><th class="p-3 text-left">Status Laporan</th><th class="p-3 text-left">Jam Masuk</th><th class="p-3 text-left">Jam Keluar</th><th class="p-3 text-left">Keterangan</th><th class="p-3 text-left">Verifikasi</th>
+                            </tr></thead>
+                            <tbody id="monitoringBody" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <!-- Guru Piket Section -->
@@ -986,7 +1018,7 @@
 
         function navigateTo(sectionId) {
             // Hide all sections
-            const sections = ['dashboard', 'jadwal', 'jadwal-saya', 'beban', 'bentrok', 'absensi', 'pengganti', 'piket', 'master'];
+            const sections = ['dashboard', 'jadwal', 'jadwal-saya', 'beban', 'bentrok', 'absensi', 'pengganti', 'monitoring', 'piket', 'master'];
             sections.forEach(s => {
                 document.getElementById(`sec-${s}`).classList.add('hidden');
                 document.getElementById(`nav-${s}`).classList.remove('bg-blue-800', 'text-white', 'font-medium');
@@ -1006,6 +1038,7 @@
             if(sectionId === 'master') { renderMasterData(); showMasterTab(masterTab); }
             if(sectionId === 'absensi') { loadAbsensiForm(); renderAbsenceHistory(); }
             if(sectionId === 'pengganti') { renderPenggantiDashboard(); renderOperationalHistory(); updateOperationalStats(); }
+            if(sectionId === 'monitoring') renderMonitoringKBM();
             if(sectionId === 'piket') renderGuruPiket();
 
             // Close sidebar on mobile after click
@@ -1013,6 +1046,46 @@
                 const sidebar=document.getElementById('sidebar');
                 if(sidebar.classList.contains('sidebar-open')) toggleSidebar();
             }
+        }
+
+
+        // ==========================================
+        // MONITORING KBM
+        // ==========================================
+        function monitoringTodayWIB(){
+            return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+        }
+        function monitoringEsc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+        function monitoringTime(v){return v?String(v).slice(0,5):'-';}
+        async function renderMonitoringKBM(){
+            const body=document.getElementById('monitoringBody'),msg=document.getElementById('monitoringMsg'),date=document.getElementById('monitoringDate'),cls=document.getElementById('monitoringClass');
+            if(!body) return;
+            if(!date.value) date.value=monitoringTodayWIB();
+            if(cls.options.length<=1) cls.innerHTML='<option value="">Semua Kelas</option>'+dbKelas.map(k=>'<option value="'+monitoringEsc(k.id)+'">'+monitoringEsc(k.nama)+'</option>').join('');
+            if(!sb||!supabaseReady){body.innerHTML='<tr><td colspan="8" class="p-6 text-center text-amber-700">Supabase belum terhubung.</td></tr>';return;}
+            msg.textContent='Memuat laporan…';
+            let q=sb.from('sikur_monitoring_kbm').select('id,tanggal,kelas,jadwal_id,jam_ke,kode_guru,status_laporan,jam_masuk,jam_keluar,keterangan,pelapor_nama,status_verifikasi,catatan_verifikasi').eq('tanggal',date.value).order('jam_ke',{ascending:true}).order('kelas',{ascending:true});
+            if(cls.value) q=q.eq('kelas',cls.value);
+            const {data,error}=await q;
+            if(error){body.innerHTML='<tr><td colspan="8" class="p-6 text-center text-red-700">'+monitoringEsc(error.message)+'</td></tr>';msg.textContent='Gagal memuat';return;}
+            const rows=data||[], guruMap=Object.fromEntries(dbGuru.map(g=>[g.id,g.nama]));
+            const pending=rows.filter(x=>x.status_verifikasi==='Perlu Verifikasi').length;
+            const present=rows.filter(x=>x.status_laporan==='Hadir').length;
+            const issues=rows.filter(x=>!['Hadir','Guru Pengganti','Tugas Mandiri'].includes(x.status_laporan)).length;
+            document.getElementById('monitoringStats').innerHTML=[
+              ['Laporan',rows.length,'ph-clipboard-text'],['Hadir',present,'ph-check-circle'],['Perlu Verifikasi',pending,'ph-hourglass'],['Perlu Perhatian',issues,'ph-warning-circle']
+            ].map(x=>'<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100"><div class="text-xs text-gray-500"><i class="ph '+x[2]+'"></i> '+x[0]+'</div><div class="text-2xl font-bold mt-1">'+x[1]+'</div></div>').join('');
+            if(!rows.length){body.innerHTML='<tr><td colspan="8" class="p-8 text-center text-gray-500">Belum ada laporan KBM untuk tanggal/kelas ini.</td></tr>';msg.textContent='0 laporan';return;}
+            body.innerHTML=rows.map(r=>'<tr>'+
+              '<td class="p-3 font-semibold whitespace-nowrap">JAM PEMBELAJARAN KE-'+monitoringEsc(r.jam_ke)+'</td>'+
+              '<td class="p-3">'+monitoringEsc(r.kelas)+'</td>'+
+              '<td class="p-3">'+monitoringEsc(guruMap[r.kode_guru]||r.kode_guru)+'</td>'+
+              '<td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-semibold bg-slate-100">'+monitoringEsc(r.status_laporan)+'</span></td>'+
+              '<td class="p-3">'+monitoringTime(r.jam_masuk)+'</td><td class="p-3">'+monitoringTime(r.jam_keluar)+'</td>'+
+              '<td class="p-3 max-w-xs">'+monitoringEsc(r.keterangan||'-')+'<div class="text-[10px] text-gray-400 mt-1">Pelapor: '+monitoringEsc(r.pelapor_nama||'-')+'</div></td>'+
+              '<td class="p-3"><span class="text-xs font-semibold '+(r.status_verifikasi==='Perlu Verifikasi'?'text-amber-700':'text-green-700')+'">'+monitoringEsc(r.status_verifikasi||'Perlu Verifikasi')+'</span></td>'+
+              '</tr>').join('');
+            msg.textContent=rows.length+' laporan';
         }
 
         // ==========================================
