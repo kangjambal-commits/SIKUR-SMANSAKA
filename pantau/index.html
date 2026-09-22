@@ -8,12 +8,12 @@
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 </head><body><div class="wrap">
 <div class="brand"><div class="logo">PK</div><div><h1>PantauKBM</h1><div class="muted">Monitoring KBM • SMA Negeri 1 Karangreja • TA 2026/2027</div></div></div>
-<section id="login" class="card"><h2>Masuk Ketua Kelas</h2><p class="muted">Pilih kelas dan masukkan PIN 6 angka.</p>
-<div class="row"><div class="grow"><label class="muted" for="kelas">Kelas</label><select id="kelas"><option value="XI-A" selected>XI-A</option></select></div><div class="grow"><label class="muted" for="pin">PIN</label><input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="PIN 6 angka"></div></div>
+<section id="login" class="card"><h2>Masuk Koordinator</h2><p class="muted">Pilih kelas dan masukkan kode akses 6 karakter.</p>
+<div class="row"><div class="grow"><label class="muted" for="kelas">Kelas</label><select id="kelas"><option value="XI-A" selected>XI-A</option></select></div><div class="grow"><label class="muted" for="pin">Kode Akses</label><input id="pin" type="text" inputmode="text" autocapitalize="characters" maxlength="6" placeholder="Contoh: KODE01"></div></div>
 <div style="margin-top:10px"><button id="btnMasuk" type="button">Masuk</button></div><p id="loginMsg" class="muted"></p></section>
 <section id="app" class="hidden"><div class="card"><div class="row"><div class="grow"><h2 id="who"></h2><div id="date" class="muted"></div></div><div><button class="secondary" onclick="logout()">Keluar</button></div></div></div>
 <div id="list"></div></section>
-<div class="muted" style="text-align:center;padding:18px">Ketua kelas melaporkan fakta keterlaksanaan KBM. Verifikasi dilakukan oleh Waka/Admin SIKUR.</div>
+<div class="muted" style="text-align:center;padding:18px">Koordinator kelas melaporkan fakta keterlaksanaan KBM. Verifikasi dilakukan oleh Waka/Admin SIKUR.</div>
 </div><div class="watermark">Made by YuGoQ</div><script>
 const SB_URL='https://nmktzoyhgmpdmbegseaq.supabase.co';
 const SB_KEY='sb_publishable_8CUhwiz7SjqlAsiCpI0pog_aDccxojf';
@@ -45,8 +45,8 @@ function fmt(t){return t?String(t).slice(0,5):'-'}
 async function login(){
  const msg=document.getElementById('loginMsg'),btn=document.getElementById('btnMasuk');
  try{
-  const kelas=document.getElementById('kelas').value,pin=document.getElementById('pin').value.trim();
-  if(!/^\d{6}$/.test(pin)){msg.className='err';msg.textContent='PIN harus 6 angka.';return;}
+  const kelas=document.getElementById('kelas').value,pin=document.getElementById('pin').value.trim().toUpperCase();
+  if(!/^[A-Z0-9]{6}$/.test(pin)){msg.className='err';msg.textContent='Kode akses harus 6 karakter (huruf/angka).';return;}
   btn.disabled=true;btn.textContent='Memeriksa...';msg.className='muted';msg.textContent='Menghubungkan ke SIKUR...';
   const {data,error}=await rpc('sikur_login_ketua_kelas',{p_kelas:kelas,p_pin:pin});
   if(error) throw error;
@@ -55,7 +55,7 @@ async function login(){
  }catch(e){msg.className='err';msg.textContent='Gagal masuk: '+(e?.message||String(e));}
  finally{btn.disabled=false;btn.textContent='Masuk';}
 }
-async function openApp(){if(!session)return;document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('who').textContent=session.nama_ketua+' • '+session.kelas;document.getElementById('date').textContent=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:'Asia/Jakarta'}).format(new Date());await load()}
+async function openApp(){if(!session)return;document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('who').textContent='Koordinator • '+session.kelas;document.getElementById('date').textContent=new Intl.DateTimeFormat('id-ID',{dateStyle:'full',timeZone:'Asia/Jakarta'}).format(new Date());await load()}
 async function load(){const box=document.getElementById('list');box.innerHTML='<div class="card muted">Memuat jadwal hari ini...</div>';const {data,error}=await rpc('sikur_jadwal_ketua_hari_ini',{p_token:session.token});if(error){box.innerHTML='<div class="card err">'+esc(error.message)+'</div>';return}
 if(!data?.length){box.innerHTML='<div class="card muted">Tidak ada jadwal KBM untuk kelas ini hari ini.</div>';return}
 box.innerHTML=data.map(r=>`<div class="card" id="j${r.jadwal_id}"><div class="row"><div class="grow"><span class="jp">JP-${r.jam_ke}</span> <span class="badge">${fmt(r.mulai)}–${fmt(r.selesai)}</span><h2 style="margin-top:8px">${esc(r.nama_mapel)}</h2><div class="muted">${esc(r.nama_guru)}</div></div><div>${r.status_laporan?'<span class="badge">'+esc(r.status_laporan)+'</span>':''}</div></div>
