@@ -1,0 +1,15 @@
+{
+  "id": "/SIKUR-SMANSAKA/app/",
+  "name": "SIKUR SMANSAKA",
+  "short_name": "SIKUR",
+  "description": "Sistem Informasi Kurikulum SMAN 1 Karangreja",
+  "start_url": "/SIKUR-SMANSAKA/app/",
+  "scope": "/SIKUR-SMANSAKA/app/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {"src": "../icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src": "../icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
+  ]
+}
