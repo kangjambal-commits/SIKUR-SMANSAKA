@@ -1,13 +1,13 @@
 {
-  "id": "/SIKUR-SMANSAKA/",
-  "name": "SIKUR SMANSAKA",
-  "short_name": "SIKUR",
-  "description": "Sistem Informasi Kurikulum SMAN 1 Karangreja",
-  "start_url": "/SIKUR-SMANSAKA/",
-  "scope": "/SIKUR-SMANSAKA/",
+  "id": "/SIKUR-SMANSAKA/pantau/",
+  "name": "PantauKBM",
+  "short_name": "PantauKBM",
+  "description": "Monitoring KBM SMA Negeri 1 Karangreja",
+  "start_url": "/SIKUR-SMANSAKA/pantau/",
+  "scope": "/SIKUR-SMANSAKA/pantau/",
   "display": "standalone",
-  "background_color": "#f3f4f6",
-  "theme_color": "#1e3a8a",
+  "background_color": "#ffffff",
+  "theme_color": "#102a72",
   "icons": [
     {
       "src": "icons/icon-192.png",
