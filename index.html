@@ -3029,7 +3029,8 @@
     </script>
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.error));
+  navigator.serviceWorker.register('/SIKUR-SMANSAKA/sw.js', { scope: '/SIKUR-SMANSAKA/' })
+    .catch(console.error);
 }
 </script>
 </body>
