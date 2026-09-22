@@ -143,5 +143,39 @@ grant execute on function public.sikur_login_ketua_kelas(text,text) to anon, aut
 grant execute on function public.sikur_lapor_kbm(text,bigint,text,time,time,text) to anon, authenticated;
 grant execute on function public.sikur_set_ketua_kelas(text,text,text) to authenticated;
 
--- Contoh setelah migrasi:
--- select public.sikur_set_ketua_kelas('X-A','Koordinator','KODE01');
+-- ============================================================
+-- Inisialisasi 27 kelas dan kode akses tetap
+-- X-A s.d. X-I       = KODE01 s.d. KODE09
+-- XI-A s.d. XI-I     = KODE10 s.d. KODE18
+-- XII-A s.d. XII-I   = KODE19 s.d. KODE27
+-- ============================================================
+
+do $
+declare
+    v_kelas text;
+    v_no integer := 0;
+    v_tingkat text;
+    v_huruf text;
+    v_kode text;
+begin
+    foreach v_tingkat in array array['X','XI','XII'] loop
+        foreach v_huruf in array array['A','B','C','D','E','F','G','H','I'] loop
+            v_no := v_no + 1;
+            v_kelas := v_tingkat || '-' || v_huruf;
+            v_kode := 'KODE' || lpad(v_no::text,2,'0');
+
+            insert into public.sikur_ketua_kelas
+                (tahun_ajaran,kelas,nama_ketua,pin_hash,aktif)
+            values
+                ('2026/2027',v_kelas,'Koordinator '||v_kelas,
+                 crypt(v_kode,gen_salt('bf')),true)
+            on conflict (tahun_ajaran,kelas)
+            do update set
+                nama_ketua='Koordinator '||excluded.kelas,
+                pin_hash=excluded.pin_hash,
+                aktif=true,
+                updated_at=now();
+        end loop;
+    end loop;
+end;
+$;
