@@ -21,18 +21,18 @@ declare
   v_guard public.sikur_login_koordinator_guard%rowtype;
   v_token text;
 begin
-  select * into v_guard from public.sikur_login_koordinator_guard g where g.kelas=p_kelas;
+  select * into v_guard from public.sikur_login_koordinator_guard g where g.kelas = sikur_login_ketua_kelas.p_kelas;
   if found and v_guard.blokir_sampai is not null and v_guard.blokir_sampai>now() then
     raise exception 'Terlalu banyak percobaan. Coba lagi beberapa menit.';
   end if;
 
   select * into v_row from public.sikur_ketua_kelas k
-  where k.tahun_ajaran='2026/2027' and k.kelas=p_kelas and k.aktif=true
+  where k.tahun_ajaran='2026/2027' and k.kelas = sikur_login_ketua_kelas.p_kelas and k.aktif=true
     and k.pin_hash=extensions.crypt(upper(trim(p_pin)),k.pin_hash);
 
   if not found then
     insert into public.sikur_login_koordinator_guard(kelas,gagal,blokir_sampai,updated_at)
-    values(p_kelas,1,null,now())
+    values(sikur_login_ketua_kelas.p_kelas,1,null,now())
     on conflict(kelas) do update set
       gagal=case when public.sikur_login_koordinator_guard.blokir_sampai is not null
                      and public.sikur_login_koordinator_guard.blokir_sampai<=now()
@@ -47,7 +47,7 @@ begin
   end if;
 
   insert into public.sikur_login_koordinator_guard(kelas,gagal,blokir_sampai,updated_at)
-  values(p_kelas,0,null,now())
+  values(sikur_login_ketua_kelas.p_kelas,0,null,now())
   on conflict(kelas) do update set gagal=0,blokir_sampai=null,updated_at=now();
 
   v_token:=encode(extensions.gen_random_bytes(24),'hex');
