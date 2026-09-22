@@ -3,7 +3,16 @@
 <title>PantauKBM SMANSAKA</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Arial;background:#f4f7fb;color:#172033}.wrap{max-width:720px;margin:auto;padding:18px}.brand{display:flex;gap:12px;align-items:center;margin:8px 0 20px}.logo{width:52px;height:52px;border-radius:14px;background:#1d4ed8;color:white;display:grid;place-items:center;font-weight:800}.card{background:white;border:1px solid #e5e7eb;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 4px 16px #0f172a0d}h1{font-size:21px;margin:0}h2{font-size:17px;margin:0 0 8px}.muted{color:#64748b;font-size:13px}.row{display:flex;gap:10px;flex-wrap:wrap}.grow{flex:1;min-width:150px}select,input,textarea,button{width:100%;font:inherit;border-radius:11px;border:1px solid #cbd5e1;padding:11px}button{border:0;background:#1d4ed8;color:white;font-weight:700;cursor:pointer}.secondary{background:#eef2ff;color:#3730a3}.danger{background:#fff1f2;color:#be123c}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:700}.jp{font-weight:800;color:#1d4ed8}.hidden{display:none}.statusgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.statusgrid button{background:#f8fafc;color:#334155;border:1px solid #dbe3ee;font-size:13px;padding:10px}.statusgrid button.sel{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd}.detail{margin-top:12px;padding-top:12px;border-top:1px solid #edf2f7}.ok{color:#047857;font-weight:700}.err{color:#b91c1c;font-weight:700}.watermark{position:fixed;right:14px;bottom:10px;z-index:50;font-size:11px;font-weight:700;letter-spacing:.3px;color:#64748b;opacity:.45;pointer-events:none;user-select:none}.testbar{background:#fff7ed;border-color:#fdba74}.testtag{display:inline-block;background:#c2410c;color:white;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800}.testbtn{background:#c2410c}@media(max-width:520px){.wrap{padding:12px}.statusgrid{grid-template-columns:1fr}.card{border-radius:15px;padding:15px}}
-</style></head><body><div class="wrap">
+</style>
+    <!-- PWA SIKUR -->
+    <link rel="manifest" href="/SIKUR-SMANSAKA/manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="/SIKUR-SMANSAKA/icon-192.png">
+    <link rel="apple-touch-icon" href="/SIKUR-SMANSAKA/icon-192.png">
+    <meta name="theme-color" content="#1d4ed8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+</head><body><div class="wrap">
 <div class="brand"><div class="logo">PK</div><div><h1>PantauKBM</h1><div class="muted">Monitoring KBM • SMA Negeri 1 Karangreja • TA 2026/2027</div></div></div>
 <section id="login" class="card"><h2>Masuk Ketua Kelas</h2><p class="muted">Pilih kelas dan masukkan PIN 6 angka.</p>
 <div class="row"><div class="grow"><label class="muted" for="kelas">Kelas</label><select id="kelas"><option value="XI-A" selected>XI-A</option></select></div><div class="grow"><label class="muted" for="pin">PIN</label><input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="PIN 6 angka"></div></div>
@@ -84,4 +93,11 @@ document.getElementById('btnMasuk').addEventListener('click',login);
 document.getElementById('btnTest').addEventListener('click',loadTest);
 document.getElementById('pin').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
 if(session)openApp();
-</script></body></html>
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/SIKUR-SMANSAKA/sw.js', {scope:'/SIKUR-SMANSAKA/'}).catch(console.error));
+}
+</script>
+
+</body></html>

@@ -1,0 +1,18 @@
+{
+  "name": "SIKUR SMANSAKA",
+  "short_name": "SIKUR",
+  "description": "Sistem Informasi Kurikulum SMA Negeri 1 Karangreja",
+  "lang": "id-ID",
+  "start_url": "/SIKUR-SMANSAKA/",
+  "scope": "/SIKUR-SMANSAKA/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    {"src":"/SIKUR-SMANSAKA/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"/SIKUR-SMANSAKA/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ],
+  "shortcuts": [
+    {"name":"PantauKBM","short_name":"PantauKBM","url":"/SIKUR-SMANSAKA/pantau/","icons":[{"src":"/SIKUR-SMANSAKA/icon-192.png","sizes":"192x192","type":"image/png"}]}
+  ]
+}

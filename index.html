@@ -88,6 +88,15 @@
   @media (max-width: 767px) { .smansaka-official-logo { width:38px; height:38px; border-radius:9px; } }
 </style>
 
+
+    <!-- PWA SIKUR -->
+    <link rel="manifest" href="/SIKUR-SMANSAKA/manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="/SIKUR-SMANSAKA/icon-192.png">
+    <link rel="apple-touch-icon" href="/SIKUR-SMANSAKA/icon-192.png">
+    <meta name="theme-color" content="#1d4ed8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
 </head>
 <body class="text-gray-800 h-screen flex overflow-hidden bg-gray-50">
     <div id="authOverlay" class="fixed inset-0 z-[100] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -2046,7 +2055,14 @@
             const w = window.open('', '_blank');
             if (!w) { alert('Izinkan pop-up browser untuk mencetak jadwal.'); return; }
             const trs = rows.map(j => `<tr><td>${j.hari}</td><td>${j.jam_ke}</td><td>${j.waktu_mulai}–${j.waktu_selesai}</td><td>${j.kelas_nama}</td><td>${j.mapel_nama}</td><td>${j.guru_nama}</td></tr>`).join('');
-            w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:24px}h1{font-size:20px}p{font-size:12px;color:#555}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #999;padding:5px;text-align:left}th{background:#eee}@media print{button{display:none}}</style></head><body><h1>${title}</h1><p>SIKUR SMA Negeri 1 Karangreja • Tahun Ajaran 2026/2027 • Semester Ganjil</p><table><thead><tr><th>Hari</th><th>JP</th><th>Waktu</th><th>Kelas</th><th>Mata Pelajaran</th><th>Guru</th></tr></thead><tbody>${trs}</tbody></table><script>window.onload=()=>window.print()<\/script></body></html>`);
+            w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:24px}h1{font-size:20px}p{font-size:12px;color:#555}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #999;padding:5px;text-align:left}th{background:#eee}@media print{button{display:none}}</style></head><body><h1>${title}</h1><p>SIKUR SMA Negeri 1 Karangreja • Tahun Ajaran 2026/2027 • Semester Ganjil</p><table><thead><tr><th>Hari</th><th>JP</th><th>Waktu</th><th>Kelas</th><th>Mata Pelajaran</th><th>Guru</th></tr></thead><tbody>${trs}</tbody></table><script>window.onload=()=>window.print()<\/script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/SIKUR-SMANSAKA/sw.js', {scope:'/SIKUR-SMANSAKA/'}).catch(console.error));
+}
+</script>
+
+</body></html>`);
             w.document.close();
         }
 
