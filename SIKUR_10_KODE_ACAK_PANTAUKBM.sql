@@ -33,7 +33,7 @@ begin
   if not found then
     insert into public.sikur_login_koordinator_guard(kelas,gagal,blokir_sampai,updated_at)
     values(sikur_login_ketua_kelas.p_kelas,1,null,now())
-    on conflict(kelas) do update set
+    on conflict on constraint sikur_login_koordinator_guard_pkey do update set
       gagal=case when public.sikur_login_koordinator_guard.blokir_sampai is not null
                      and public.sikur_login_koordinator_guard.blokir_sampai<=now()
                  then 1 else public.sikur_login_koordinator_guard.gagal+1 end,
@@ -48,7 +48,7 @@ begin
 
   insert into public.sikur_login_koordinator_guard(kelas,gagal,blokir_sampai,updated_at)
   values(sikur_login_ketua_kelas.p_kelas,0,null,now())
-  on conflict(kelas) do update set gagal=0,blokir_sampai=null,updated_at=now();
+  on conflict on constraint sikur_login_koordinator_guard_pkey do update set gagal=0,blokir_sampai=null,updated_at=now();
 
   v_token:=encode(extensions.gen_random_bytes(24),'hex');
   insert into public.sikur_ketua_kelas_sesi(token_hash,ketua_id,berlaku_sampai)
