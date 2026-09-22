@@ -150,7 +150,7 @@ grant execute on function public.sikur_set_ketua_kelas(text,text,text) to authen
 -- XII-A s.d. XII-I   = KODE19 s.d. KODE27
 -- ============================================================
 
-do $
+do $pantau$
 declare
     v_kelas text;
     v_no integer := 0;
@@ -178,4 +178,4 @@ begin
         end loop;
     end loop;
 end;
-$;
+$pantau$;
