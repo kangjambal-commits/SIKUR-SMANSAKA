@@ -1,30 +1,5 @@
-const CACHE = 'sikur-smansaka-pwa-v2';
-const OFFLINE_URL = '/SIKUR-SMANSAKA/';
-
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll([
-      OFFLINE_URL,
-      '/SIKUR-SMANSAKA/manifest.webmanifest'
-    ]))
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(OFFLINE_URL))
-    );
-  }
-});
+const CACHE='sikur-smansaka-pwa-v2';
+const ASSETS=['/SIKUR-SMANSAKA/','/SIKUR-SMANSAKA/manifest.webmanifest','/SIKUR-SMANSAKA/icons/icon-192.png','/SIKUR-SMANSAKA/icons/icon-512.png'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting();});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).catch(()=>caches.match('/SIKUR-SMANSAKA/')));return;}e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});
