@@ -409,6 +409,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <div id="jadwalPagination" class="border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600"></div>
                     <div id="jadwalLoading" class="hidden p-8 flex justify-center items-center">
                         <div class="loader"></div>
                     </div>
@@ -1194,9 +1195,11 @@
 
         function renderJadwal() {
             const tbody = document.getElementById('jadwalTableBody');
+            const pagination = document.getElementById('jadwalPagination');
             const loading = document.getElementById('jadwalLoading');
             
             tbody.innerHTML = '';
+            pagination.innerHTML = '';
             loading.classList.remove('hidden');
 
             setTimeout(() => {
@@ -1247,13 +1250,11 @@
                     `).join('');
                     
                     if(filtered.length > displayLimit) {
-                         tbody.innerHTML += `<tr><td colspan="6" class="text-center py-3 text-sm text-gray-600 bg-gray-50">
-                             <div class="flex flex-wrap items-center justify-center gap-3">
+                         pagination.innerHTML = `<div class="flex flex-wrap items-center justify-center gap-3">
                                  <button type="button" onclick="pindahHalamanJadwal(${jadwalPage - 1})" ${jadwalPage === 0 ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">Sebelumnya</button>
                                  <span>Data ${start + 1}–${start + displayData.length} dari ${filtered.length} · Halaman ${jadwalPage + 1}/${totalPages}</span>
                                  <button type="button" onclick="pindahHalamanJadwal(${jadwalPage + 1})" ${jadwalPage === totalPages - 1 ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">Berikutnya</button>
-                             </div>
-                         </td></tr>`;
+                             </div>`;
                     }
                 }
                 loading.classList.add('hidden');
