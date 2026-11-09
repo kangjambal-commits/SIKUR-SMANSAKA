@@ -143,13 +143,8 @@ grant execute on function public.sikur_login_ketua_kelas(text,text) to anon, aut
 grant execute on function public.sikur_lapor_kbm(text,bigint,text,time,time,text) to anon, authenticated;
 grant execute on function public.sikur_set_ketua_kelas(text,text,text) to authenticated;
 
--- ============================================================
--- Inisialisasi 27 kelas dan kode akses tetap
--- X-A s.d. X-I       = KODE01 s.d. KODE09
--- XI-A s.d. XI-I     = KODE10 s.d. KODE18
--- XII-A s.d. XII-I   = KODE19 s.d. KODE27
--- ============================================================
-
+-- Inisialisasi hanya untuk kelas yang belum memiliki akun koordinator.
+-- Kode awal sementara; segera jalankan SIKUR_10 untuk merotasi kode secara acak.
 do $pantau$
 declare
     v_kelas text;
@@ -169,12 +164,7 @@ begin
             values
                 ('2026/2027',v_kelas,'Koordinator '||v_kelas,
                  crypt(v_kode,gen_salt('bf')),true)
-            on conflict (tahun_ajaran,kelas)
-            do update set
-                nama_ketua='Koordinator '||excluded.kelas,
-                pin_hash=excluded.pin_hash,
-                aktif=true,
-                updated_at=now();
+            on conflict (tahun_ajaran,kelas) do nothing;
         end loop;
     end loop;
 end;

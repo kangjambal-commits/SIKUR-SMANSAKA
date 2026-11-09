@@ -63,51 +63,57 @@ set search_path = public, extensions;
 alter function public.sikur_set_ketua_kelas(text,text,text)
 set search_path = public, extensions;
 
--- Ganti 27 kode akses dengan kode acak.
+-- Rotasi 27 kode akses secara acak. Kode hanya ditampilkan pada hasil
+-- SQL Editor saat skrip dijalankan; tidak disimpan sebagai teks di repositori.
+create temporary table if not exists sikur_generated_codes (
+  kelas text primary key,
+  kode_akses text not null
+) on commit preserve rows;
+truncate table pg_temp.sikur_generated_codes;
+
 do $codes$
-declare r record;
+declare
+  r record;
+  v_bytes bytea;
+  v_code text;
+  v_i integer;
+  v_alphabet constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 begin
   for r in
-    select * from (values
-      ('X-A','BYBJH7'),
-      ('X-B','LUN7Z5'),
-      ('X-C','L4N7CM'),
-      ('X-D','GQRJ7R'),
-      ('X-E','QGPZ7Y'),
-      ('X-F','PF7TY3'),
-      ('X-G','78R88X'),
-      ('X-H','F82NLS'),
-      ('X-I','8GEWRK'),
-      ('XI-A','P5D88Q'),
-      ('XI-B','8F6ZGL'),
-      ('XI-C','JXQ7GK'),
-      ('XI-D','ZFT6TR'),
-      ('XI-E','FDPYV3'),
-      ('XI-F','69MAFN'),
-      ('XI-G','T7EB7Z'),
-      ('XI-H','S2YUEB'),
-      ('XI-I','FUL22X'),
-      ('XII-A','J9JUF6'),
-      ('XII-B','GV4J2D'),
-      ('XII-C','LJGUMA'),
-      ('XII-D','XHVHBN'),
-      ('XII-E','9G5MTS'),
-      ('XII-F','BRPNDE'),
-      ('XII-G','6G5RUN'),
-      ('XII-H','8XTHV4'),
-      ('XII-I','AAPTMK')
-    ) as x(kelas,kode)
+    select k.kelas
+    from public.sikur_ketua_kelas k
+    where k.tahun_ajaran='2026/2027'
+      and k.kelas = any(array[
+        'X-A','X-B','X-C','X-D','X-E','X-F','X-G','X-H','X-I',
+        'XI-A','XI-B','XI-C','XI-D','XI-E','XI-F','XI-G','XI-H','XI-I',
+        'XII-A','XII-B','XII-C','XII-D','XII-E','XII-F','XII-G','XII-H','XII-I'
+      ])
+    order by k.kelas
   loop
+    v_bytes := extensions.gen_random_bytes(6);
+    v_code := '';
+    for v_i in 0..5 loop
+      v_code := v_code || substr(v_alphabet, (get_byte(v_bytes,v_i) % length(v_alphabet)) + 1, 1);
+    end loop;
+
     update public.sikur_ketua_kelas
     set nama_ketua='Koordinator '||r.kelas,
-        pin_hash=extensions.crypt(r.kode,extensions.gen_salt('bf')),
-        aktif=true,updated_at=now()
+        pin_hash=extensions.crypt(v_code,extensions.gen_salt('bf')),
+        aktif=true,
+        updated_at=now()
     where tahun_ajaran='2026/2027' and kelas=r.kelas;
+
+    insert into pg_temp.sikur_generated_codes(kelas,kode_akses)
+    values(r.kelas,v_code);
   end loop;
 end;
 $codes$;
 
+-- Putuskan sesi lama dan reset penghitung percobaan login.
 delete from public.sikur_ketua_kelas_sesi;
 delete from public.sikur_login_koordinator_guard;
 
-grant execute on function public.sikur_login_ketua_kelas(text,text) to anon,authenticated;
+-- Simpan hasil query di tempat aman, lalu bagikan kode per kelas secara privat.
+select kelas,kode_akses
+from pg_temp.sikur_generated_codes
+order by kelas;

@@ -11,17 +11,41 @@ drop policy if exists "SIKUR authenticated read" on public.sikur_state;
 create policy "SIKUR authenticated read"
 on public.sikur_state for select
 to authenticated
-using (true);
+using (
+  exists (
+    select 1 from public.sikur_profiles p
+    where p.id = auth.uid()
+      and p.role in ('admin','waka','kepala','guru')
+  )
+);
 
 drop policy if exists "SIKUR authenticated insert" on public.sikur_state;
 create policy "SIKUR authenticated insert"
 on public.sikur_state for insert
 to authenticated
-with check (true);
+with check (
+  exists (
+    select 1 from public.sikur_profiles p
+    where p.id = auth.uid()
+      and p.role in ('admin','waka')
+  )
+);
 
 drop policy if exists "SIKUR authenticated update" on public.sikur_state;
 create policy "SIKUR authenticated update"
 on public.sikur_state for update
 to authenticated
-using (true)
-with check (true);
+using (
+  exists (
+    select 1 from public.sikur_profiles p
+    where p.id = auth.uid()
+      and p.role in ('admin','waka')
+  )
+)
+with check (
+  exists (
+    select 1 from public.sikur_profiles p
+    where p.id = auth.uid()
+      and p.role in ('admin','waka')
+  )
+);
