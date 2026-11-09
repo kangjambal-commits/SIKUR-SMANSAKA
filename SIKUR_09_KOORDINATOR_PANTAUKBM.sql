@@ -64,7 +64,7 @@ begin
       then raise exception 'Kode akses harus 6 karakter huruf/angka'; end if;
 
     insert into public.sikur_ketua_kelas(tahun_ajaran,kelas,nama_ketua,pin_hash,aktif)
-    values ('2026/2027',p_kelas,'Koordinator '||p_kelas,crypt(upper(trim(p_pin)),gen_salt('bf')),true)
+    values ('2026/2027',p_kelas,'Koordinator '||p_kelas,crypt(upper(trim(p_pin)),gen_salt('bf',12)),true)
     on conflict (tahun_ajaran,kelas)
     do update set
       nama_ketua='Koordinator '||excluded.kelas,
@@ -163,7 +163,7 @@ begin
                 (tahun_ajaran,kelas,nama_ketua,pin_hash,aktif)
             values
                 ('2026/2027',v_kelas,'Koordinator '||v_kelas,
-                 crypt(v_kode,gen_salt('bf')),true)
+                 crypt(v_kode,gen_salt('bf',12)),true)
             on conflict (tahun_ajaran,kelas) do nothing;
         end loop;
     end loop;
