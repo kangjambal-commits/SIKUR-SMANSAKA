@@ -98,7 +98,7 @@ begin
 
     update public.sikur_ketua_kelas
     set nama_ketua='Koordinator '||r.kelas,
-        pin_hash=extensions.crypt(v_code,extensions.gen_salt('bf')),
+        pin_hash=extensions.crypt(v_code,extensions.gen_salt('bf',12)),
         aktif=true,
         updated_at=now()
     where tahun_ajaran='2026/2027' and kelas=r.kelas;
