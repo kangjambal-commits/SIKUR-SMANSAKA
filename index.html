@@ -293,7 +293,7 @@
                     </div>
                     <div class="text-right hidden sm:block">
                         <p class="text-sm font-medium text-gray-600" id="currentDateDisplay">Senin, 1 Jan 2024</p>
-                        <p class="text-xs text-gray-400" id="academicPeriodHeader">Tahun Ajaran 2026/2027 • Semester Ganjil</p>
+                        <p class="text-xs text-gray-400" id="academicPeriodHeader">Memuat periode aktif...</p>
                     </div>
                 </div>
 
@@ -1799,7 +1799,7 @@
             if(firstPending) findCandidates(firstPending.id, a.tanggal);
         }
 
-        // Jadwal Piket KBM Semester Ganjil TA 2026/2027 (Lampiran 14 SK Kepala Sekolah, 1 Juli 2026).
+        // Dataset awal jadwal piket KBM (Lampiran 14 SK Kepala Sekolah, 1 Juli 2026); tinjau kembali untuk periode berjalan.
         // Drs. Klino Hery Styawan tidak dimasukkan karena sudah pensiun.
         const dbPiketKbm = {
             Senin: ['ARIEF','MUFID','YULIYA','ETI','ANISA','KATWANG','SAEFUL','AAS','LILIN','IIN','WIMBO','TARI'],
@@ -2613,7 +2613,7 @@ if ('serviceWorker' in navigator) {
                 const gp=dbGuru.find(g=>g.id===p.guru_pengganti_id)||{};
                 return `<tr><td>${formatDateID(p.tanggal)}</td><td>${j.guru_nama||'-'}</td><td>${j.jam_ke||p.jam_ke}</td><td>${j.kelas_nama||'-'}</td><td>${j.mapel_nama||'-'}</td><td>${gp.nama||'-'}</td></tr>`;
             }).join('');
-            w.document.write(`<!doctype html><html><head><title>Laporan Guru Pengganti</title><style>body{font-family:Arial;padding:24px}h1{font-size:20px}p{font-size:12px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #888;padding:6px}th{background:#eee}</style></head><body><h1>Laporan Guru Pengganti</h1><p>SMA Negeri 1 Karangreja • Tahun Ajaran 2026/2027 • Semester Ganjil</p><table><thead><tr><th>Tanggal</th><th>Guru Tidak Hadir</th><th>JP</th><th>Kelas</th><th>Mapel</th><th>Guru Pengganti</th></tr></thead><tbody>${trs}</tbody></table><script>window.onload=()=>window.print()<\/script></body></html>`);
+            w.document.write(`<!doctype html><html><head><title>Laporan Guru Pengganti</title><style>body{font-family:Arial;padding:24px}h1{font-size:20px}p{font-size:12px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #888;padding:6px}th{background:#eee}</style></head><body><h1>Laporan Guru Pengganti</h1><p>SMA Negeri 1 Karangreja • ${specialScheduleEsc(getAcademicPeriodLabel())}</p><table><thead><tr><th>Tanggal</th><th>Guru Tidak Hadir</th><th>JP</th><th>Kelas</th><th>Mapel</th><th>Guru Pengganti</th></tr></thead><tbody>${trs}</tbody></table><script>window.onload=()=>window.print()<\/script></body></html>`);
             w.document.close();
         }
 
