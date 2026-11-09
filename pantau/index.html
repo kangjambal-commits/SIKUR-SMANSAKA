@@ -45,8 +45,8 @@ function fmt(t){return t?String(t).slice(0,5):'-'}
 async function login(){
  const msg=document.getElementById('loginMsg'),btn=document.getElementById('btnMasuk');
  try{
-  const kelas=document.getElementById('kelas').value,pin=document.getElementById('pin').value.trim();
-  if(!/^\d{6}$/.test(pin)){msg.className='err';msg.textContent='PIN harus 6 angka.';return;}
+  const kelas=document.getElementById('kelas').value,pin=document.getElementById('pin').value.trim().toUpperCase();
+  if(!/^[A-Z0-9]{6}$/.test(pin)){msg.className='err';msg.textContent='Kode akses harus 6 karakter huruf/angka.';return;}
   btn.disabled=true;btn.textContent='Memeriksa...';msg.className='muted';msg.textContent='Menghubungkan ke SIKUR...';
   const {data,error}=await rpc('sikur_login_ketua_kelas',{p_kelas:kelas,p_pin:pin});
   if(error) throw error;
