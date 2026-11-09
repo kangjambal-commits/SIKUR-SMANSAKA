@@ -3408,7 +3408,7 @@ if ('serviceWorker' in navigator) {
             const raw=String(value??'').trim();
             if(!raw) return {value:null,error:'kosong'};
             const key=raw.toUpperCase();
-            const byId=list.filter(x=>String(x.id).toUpperCase()===key);
+            const byId=list.filter(x=>normalizeExcelValue(x.id)===normalizeExcelValue(raw));
             if(byId.length===1) return {value:byId[0].id};
             if(byId.length>1) return {value:null,error:'ambigu'};
             const byName=list.filter(x=>normalizeExcelValue(x.nama)===normalizeExcelValue(raw));
@@ -3437,8 +3437,8 @@ if ('serviceWorker' in navigator) {
                     hari:['hari'],
                     jp:['jp','jamke','jampembelajaran','jamkeberapa'],
                     kelas:['kelas','rombel','kodekelas','namakelas'],
-                    mapel:['kodemapel','mapel','matapelajaran','namamapel','kodepelajaran'],
-                    guru:['kodeguru','guru','namaguru','pengajar','gurupengampu']
+                    mapel:['kodemapel','kodematapelajaran','mapel','matapelajaran','namamapel','kodepelajaran'],
+                    guru:['kodeguru','kodegurupengampu','guru','namaguru','pengajar','gurupengampu']
                 };
                 let headerIndex=-1,cols={};
                 for(let i=0;i<Math.min(matrix.length,15);i++){
@@ -3448,7 +3448,7 @@ if ('serviceWorker' in navigator) {
                     if(Object.values(found).every(x=>x>=0)){headerIndex=i;cols=found;break;}
                 }
                 if(headerIndex<0) throw new Error('Header wajib belum ditemukan. Gunakan template: Hari, JP, Kelas, Kode Mapel, Kode Guru.');
-                const days=new Map(['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'].map(x=>[x.toLowerCase(),x]));
+                const days=new Map([['senin','Senin'],['selasa','Selasa'],['rabu','Rabu'],['kamis','Kamis'],['jumat','Jumat'],['sabtu','Sabtu'],['monday','Senin'],['tuesday','Selasa'],['wednesday','Rabu'],['thursday','Kamis'],['friday','Jumat'],['saturday','Sabtu']]);
                 const rows=[],errors=[],classKeys=new Set(),teacherSlots=new Set(),classSlots=new Set();
                 for(let i=headerIndex+1;i<matrix.length;i++){
                     const row=matrix[i]||[];
