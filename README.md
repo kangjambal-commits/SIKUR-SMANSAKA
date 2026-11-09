@@ -47,3 +47,12 @@ Menu **Jadwal Khusus** digunakan Admin/Waka Kurikulum untuk mengatur perubahan w
 - `SIKUR_12_HARDENING_PANTAUKBM.sql` mengonsolidasikan penguatan RLS, hak akses RPC, validasi kode kelas, verifikasi token, keamanan view jadwal, dan indeks relasi. Jalankan setelah skrip `SIKUR_09`, `SIKUR_10`, dan `SIKUR_11`. Skrip ini tidak merotasi kode koordinator.
 - Hash PIN yang sudah tersimpan tidak diubah oleh hardening ini. Hash dengan work factor 12 diterapkan saat PIN berikutnya diatur ulang atau dirotasi.
 - Perubahan pada branch pemeliharaan harus diuji melalui deployment preview sebelum digabungkan ke `main`.
+
+
+## Pesan untuk Kelas
+
+Menu **Pesan Kelas** digunakan Admin/Waka untuk mengirim informasi kepada satu kelas, beberapa kelas, atau seluruh kelas. Pesan dapat diberi prioritas biasa/penting, tanggal mulai tampil, tanggal akhir opsional, dan status aktif/nonaktif. Ketua kelas melihat pesan yang sesuai dengan kelasnya setelah masuk ke PantauKBM. Pesan hanya tampil selama masa berlakunya; menu ini tidak mengirim pesan WhatsApp otomatis.
+
+- Pengiriman dan perubahan pesan dibatasi oleh RLS untuk role `admin` dan `waka`.
+- PantauKBM mengambil pesan melalui RPC tervalidasi menggunakan token sesi kelas; tabel pesan tidak dibuka untuk akses langsung anon.
+- Jalankan `SIKUR_14_PESAN_KELAS.sql` setelah `SIKUR_13_JADWAL_KHUSUS.sql` pada proyek Supabase yang benar.
