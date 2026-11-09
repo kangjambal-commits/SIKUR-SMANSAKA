@@ -160,6 +160,11 @@
                     </a>
                 </li>
                 <li>
+                    <a href="#" onclick="navigateTo('pesan-kelas')" id="nav-pesan-kelas" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors">
+                        <i class="ph ph-megaphone-simple text-xl"></i> Pesan Kelas
+                    </a>
+                </li>
+                <li>
                     <a href="#" onclick="navigateTo('jadwal-saya')" id="nav-jadwal-saya" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors">
                         <i class="ph ph-clock-user text-xl"></i> Jadwal Saya Hari Ini
                     </a>
@@ -481,6 +486,70 @@
                     <div id="specialScheduleList" class="p-4 space-y-3">
                         <p class="text-sm text-gray-400">Memuat data jadwal khusus...</p>
                     </div>
+                </div>
+            </section>
+
+            <!-- Pesan untuk Kelas -->
+            <section id="sec-pesan-kelas" class="hidden fade-in space-y-6">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Pesan Kelas</h2>
+                        <p class="text-sm text-gray-500 mt-1">Kirim pengumuman kepada satu kelas, beberapa kelas, atau seluruh kelas melalui PantauKBM.</p>
+                    </div>
+                    <button id="btnNewClassMessage" onclick="openClassMessageForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Tulis Pesan</button>
+                </div>
+                <div id="classMessageEditor" class="hidden bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <h3 id="classMessageFormTitle" class="font-semibold text-gray-800">Tulis Pesan Baru</h3>
+                        <span class="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700">PantauKBM</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label for="classMessageTitle" class="block text-sm font-medium text-gray-700 mb-1">Judul pesan</label>
+                            <input id="classMessageTitle" maxlength="120" placeholder="Contoh: Perubahan ruang KBM" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label for="classMessagePriority" class="block text-sm font-medium text-gray-700 mb-1">Tingkat kepentingan</label>
+                            <select id="classMessagePriority" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="biasa">Biasa</option>
+                                <option value="penting">Penting</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="classMessageBody" class="block text-sm font-medium text-gray-700 mb-1">Isi pesan</label>
+                        <textarea id="classMessageBody" rows="5" maxlength="3000" placeholder="Tuliskan informasi yang perlu diketahui peserta didik..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <label class="block text-sm font-medium text-gray-700">Tujuan kelas</label>
+                            <label class="inline-flex items-center gap-2 text-sm font-semibold text-blue-700"><input id="classMessageAll" type="checkbox" class="w-4 h-4" onchange="toggleClassMessageAll()"> Seluruh kelas</label>
+                        </div>
+                        <div id="classMessageTargets" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 border border-gray-200 rounded-lg p-3 max-h-52 overflow-y-auto"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label for="classMessageStart" class="block text-sm font-medium text-gray-700 mb-1">Mulai ditampilkan</label>
+                            <input id="classMessageStart" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label for="classMessageEnd" class="block text-sm font-medium text-gray-700 mb-1">Berakhir ditampilkan (opsional)</label>
+                            <input id="classMessageEnd" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700"><input id="classMessageActive" type="checkbox" checked class="w-4 h-4"> Tampilkan pesan kepada kelas</label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="saveClassMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Simpan Pesan</button>
+                        <button onclick="resetClassMessageForm()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Batal</button>
+                        <span id="classMessageFeedback" class="text-sm text-gray-500"></span>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 border-b border-gray-100">
+                        <h3 class="font-semibold text-gray-800">Riwayat Pesan</h3>
+                        <p class="text-xs text-gray-500 mt-1">Pesan aktif akan muncul pada PantauKBM sesuai kelas dan tanggal berlakunya.</p>
+                    </div>
+                    <div id="classMessageList" class="p-4 space-y-3"><p class="text-sm text-gray-400">Memuat pesan...</p></div>
                 </div>
             </section>
 
@@ -1092,7 +1161,7 @@
 
         function navigateTo(sectionId) {
             // Hide all sections
-            const sections = ['dashboard', 'jadwal', 'jadwal-khusus', 'jadwal-saya', 'beban', 'bentrok', 'absensi', 'pengganti', 'monitoring', 'piket', 'master'];
+            const sections = ['dashboard', 'jadwal', 'jadwal-khusus', 'pesan-kelas', 'jadwal-saya', 'beban', 'bentrok', 'absensi', 'pengganti', 'monitoring', 'piket', 'master'];
             sections.forEach(s => {
                 document.getElementById(`sec-${s}`).classList.add('hidden');
                 document.getElementById(`nav-${s}`).classList.remove('bg-blue-800', 'text-white', 'font-medium');
@@ -1107,6 +1176,7 @@
             // Trigger specific renders
             if(sectionId === 'jadwal') renderJadwal();
             if(sectionId === 'jadwal-khusus') renderSpecialSchedules();
+            if(sectionId === 'pesan-kelas') { loadClassMessages(); renderClassMessageTargets(); }
             if(sectionId === 'jadwal-saya') renderJadwalSayaHariIni();
             if(sectionId === 'beban') renderBebanMengajar();
             if(sectionId === 'bentrok') runCollisionDetection();
@@ -2813,6 +2883,11 @@ if ('serviceWorker' in navigator) {
             document.querySelectorAll('[onclick*="showSection(\'master\'"]').forEach(el=>{
                 el.style.display=roleCanManageMaster()?'':'none';
             });
+            const navPesan=document.getElementById('nav-pesan-kelas');
+            if(navPesan) navPesan.closest('li').style.display=roleCanManageMaster()?'':'none';
+            const secPesan=document.getElementById('sec-pesan-kelas');
+            if(secPesan && !roleCanManageMaster()) secPesan.classList.add('hidden');
+
             const secMaster=document.getElementById('sec-master');
             if(secMaster && !roleCanManageMaster()) secMaster.classList.add('hidden');
 
@@ -3078,6 +3153,7 @@ if ('serviceWorker' in navigator) {
                 .on('postgres_changes',{event:'*',schema:'public',table:'sikur_ketidakhadiran'},()=>syncFromSupabase(false))
                 .on('postgres_changes',{event:'*',schema:'public',table:'sikur_pengganti'},()=>syncFromSupabase(false))
                 .on('postgres_changes',{event:'*',schema:'public',table:'sikur_jadwal_khusus'},()=>loadSpecialSchedules(true))
+                .on('postgres_changes',{event:'*',schema:'public',table:'sikur_pesan_kelas'},()=>loadClassMessages())
                 .subscribe();
         }
 
@@ -3435,6 +3511,146 @@ if ('serviceWorker' in navigator) {
             if(error) return alert('Gagal menghapus jadwal khusus: '+error.message);
             await loadSpecialSchedules(true);
             resetSpecialScheduleForm();
+        }
+
+        // ==========================================
+        // PESAN UNTUK KELAS
+        // ==========================================
+        let statePesanKelas = [];
+
+        function classMessageEsc(value) {
+            return String(value ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
+
+        function renderClassMessageTargets(selected=[]) {
+            const box=document.getElementById('classMessageTargets');
+            if(!box) return;
+            const chosen=new Set(selected);
+            box.innerHTML=(dbKelas||[]).map(k=>{
+                const id=String(k.id);
+                return '<label class="flex items-center gap-2 text-sm text-gray-700 rounded-lg px-2 py-1.5 hover:bg-gray-50"><input type="checkbox" class="class-message-target w-4 h-4" value="'+classMessageEsc(id)+'" '+(chosen.has(id)?'checked':'')+' onchange="updateClassMessageAllState()"> '+classMessageEsc(k.nama||id)+'</label>';
+            }).join('') || '<p class="text-sm text-gray-500">Data kelas belum tersedia. Sinkronkan data SIKUR terlebih dahulu.</p>';
+            const all=document.getElementById('classMessageAll');
+            if(all) all.checked=(dbKelas||[]).length>0 && selected.length===(dbKelas||[]).length;
+        }
+
+        function toggleClassMessageAll() {
+            const all=document.getElementById('classMessageAll')?.checked===true;
+            document.querySelectorAll('.class-message-target').forEach(el=>el.checked=all);
+        }
+
+        function updateClassMessageAllState() {
+            const boxes=[...document.querySelectorAll('.class-message-target')];
+            const all=document.getElementById('classMessageAll');
+            if(all) all.checked=boxes.length>0 && boxes.every(el=>el.checked);
+        }
+
+        async function loadClassMessages() {
+            const box=document.getElementById('classMessageList');
+            if(!sb || !currentUser || !box) return;
+            box.innerHTML='<p class="text-sm text-gray-400">Memuat pesan...</p>';
+            const {data,error}=await sb.from('sikur_pesan_kelas').select('*').order('created_at',{ascending:false}).limit(200);
+            if(error) {
+                box.innerHTML='<p class="text-sm text-red-600">Pesan belum dapat dimuat: '+classMessageEsc(error.message)+'</p>';
+                return;
+            }
+            statePesanKelas=data||[];
+            renderClassMessages();
+        }
+
+        function renderClassMessages() {
+            const box=document.getElementById('classMessageList');
+            if(!box) return;
+            if(!statePesanKelas.length) {
+                box.innerHTML='<p class="text-sm text-gray-500">Belum ada pesan untuk kelas.</p>';
+                return;
+            }
+            box.innerHTML=statePesanKelas.map(item=>{
+                const targets=(item.kelas||[]).length===(dbKelas||[]).length?'Seluruh kelas':(item.kelas||[]).join(', ');
+                const dates=classMessageEsc(item.mulai_tampil)+(item.berlaku_sampai?' s.d. '+classMessageEsc(item.berlaku_sampai):' • tanpa batas akhir');
+                const priority=item.prioritas==='penting'?'Penting':'Biasa';
+                const status=item.aktif?'Aktif':'Disembunyikan';
+                return '<article class="border rounded-xl p-4 '+(item.aktif?'border-gray-200':'border-gray-100 bg-gray-50 opacity-75')+'"><div class="flex flex-wrap items-start justify-between gap-3"><div class="min-w-0 flex-1"><div class="flex flex-wrap gap-2 mb-2"><span class="text-xs px-2 py-1 rounded-full '+(item.prioritas==='penting'?'bg-amber-100 text-amber-800':'bg-blue-50 text-blue-700')+'">'+priority+'</span><span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">'+status+'</span></div><h4 class="font-semibold text-gray-800">'+classMessageEsc(item.judul)+'</h4><p class="text-xs text-gray-500 mt-1">Tujuan: '+classMessageEsc(targets)+' • '+dates+'</p><p class="text-sm text-gray-700 mt-3 whitespace-pre-wrap break-words">'+classMessageEsc(item.isi)+'</p></div><div class="flex gap-3 text-sm shrink-0"><button onclick="editClassMessage(\''+item.id+'\')" class="text-blue-700 font-semibold">Ubah</button><button onclick="deleteClassMessage(\''+item.id+'\')" class="text-red-600 font-semibold">Hapus</button></div></div></article>';
+            }).join('');
+        }
+
+        function openClassMessageForm(id=null) {
+            if(!canManageCurriculumContent()) return alert('Hanya Admin/Waka Kurikulum yang dapat mengirim pesan kelas.');
+            resetClassMessageForm();
+            const editor=document.getElementById('classMessageEditor');
+            editor.classList.remove('hidden');
+            if(id) {
+                const item=statePesanKelas.find(x=>x.id===id);
+                if(!item) return;
+                editor.dataset.editId=id;
+                document.getElementById('classMessageFormTitle').textContent='Ubah Pesan';
+                document.getElementById('classMessageTitle').value=item.judul||'';
+                document.getElementById('classMessageBody').value=item.isi||'';
+                document.getElementById('classMessagePriority').value=item.prioritas||'biasa';
+                document.getElementById('classMessageStart').value=item.mulai_tampil||monitoringTodayWIB();
+                document.getElementById('classMessageEnd').value=item.berlaku_sampai||'';
+                document.getElementById('classMessageActive').checked=item.aktif!==false;
+                renderClassMessageTargets(item.kelas||[]);
+            } else {
+                renderClassMessageTargets([]);
+                document.getElementById('classMessageStart').value=monitoringTodayWIB();
+            }
+            editor.scrollIntoView({behavior:'smooth',block:'start'});
+        }
+
+        function editClassMessage(id) { openClassMessageForm(id); }
+
+        function resetClassMessageForm() {
+            const editor=document.getElementById('classMessageEditor');
+            if(!editor) return;
+            editor.classList.add('hidden');
+            delete editor.dataset.editId;
+            document.getElementById('classMessageTitle').value='';
+            document.getElementById('classMessageBody').value='';
+            document.getElementById('classMessagePriority').value='biasa';
+            document.getElementById('classMessageStart').value='';
+            document.getElementById('classMessageEnd').value='';
+            document.getElementById('classMessageActive').checked=true;
+            document.getElementById('classMessageFeedback').textContent='';
+            document.getElementById('classMessageFormTitle').textContent='Tulis Pesan Baru';
+            renderClassMessageTargets([]);
+        }
+
+        async function saveClassMessage() {
+            if(!canManageCurriculumContent()) return alert('Hanya Admin/Waka Kurikulum yang dapat mengirim pesan kelas.');
+            if(!sb || !supabaseReady || !currentUser) return alert('Koneksi Supabase dan akun login diperlukan.');
+            const judul=document.getElementById('classMessageTitle').value.trim();
+            const isi=document.getElementById('classMessageBody').value.trim();
+            const kelas=[...document.querySelectorAll('.class-message-target:checked')].map(el=>el.value);
+            const mulai=document.getElementById('classMessageStart').value;
+            const akhir=document.getElementById('classMessageEnd').value||null;
+            const feedback=document.getElementById('classMessageFeedback');
+            if(!judul || !isi) return alert('Judul dan isi pesan wajib diisi.');
+            if(!kelas.length) return alert('Pilih minimal satu kelas atau centang Seluruh kelas.');
+            if(!mulai) return alert('Tanggal mulai ditampilkan wajib diisi.');
+            if(akhir && akhir<mulai) return alert('Tanggal akhir tidak boleh lebih awal daripada tanggal mulai.');
+            const editor=document.getElementById('classMessageEditor'),editId=editor.dataset.editId;
+            const payload={judul,isi,kelas,prioritas:document.getElementById('classMessagePriority').value,aktif:document.getElementById('classMessageActive').checked,mulai_tampil:mulai,berlaku_sampai:akhir,updated_at:new Date().toISOString()};
+            feedback.className='text-sm text-gray-500';feedback.textContent='Menyimpan pesan...';
+            try {
+                const result=editId
+                    ? await sb.from('sikur_pesan_kelas').update(payload).eq('id',editId)
+                    : await sb.from('sikur_pesan_kelas').insert({...payload,created_by:currentUser.id});
+                if(result.error) throw result.error;
+                await loadClassMessages();
+                resetClassMessageForm();
+                feedback.className='text-sm text-green-700';feedback.textContent='Pesan berhasil disimpan.';
+            } catch(e) {
+                feedback.className='text-sm text-red-600';feedback.textContent='Gagal menyimpan: '+(e.message||String(e));
+            }
+        }
+
+        async function deleteClassMessage(id) {
+            if(!canManageCurriculumContent() || !confirm('Hapus pesan ini? Pesan akan langsung hilang dari PantauKBM kelas tujuan.')) return;
+            const {error}=await sb.from('sikur_pesan_kelas').delete().eq('id',id);
+            if(error) return alert('Gagal menghapus pesan: '+error.message);
+            await loadClassMessages();
+            resetClassMessageForm();
         }
 
         function getScheduleRowForDate(jadwalId,date) {
