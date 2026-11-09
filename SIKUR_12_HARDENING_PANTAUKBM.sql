@@ -196,6 +196,7 @@ revoke all on function public.sikur_login_ketua_kelas(text,text) from public;
 grant execute on function public.sikur_login_ketua_kelas(text,text) to anon, authenticated;
 revoke all on function public.sikur_jadwal_ketua_hari_ini(text) from public;
 grant execute on function public.sikur_jadwal_ketua_hari_ini(text) to anon, authenticated;
+revoke all on function public.sikur_lapor_kbm(text,bigint,text,time without time zone,time without time zone,text) from public;
 grant execute on function public.sikur_lapor_kbm(text,bigint,text,time without time zone,time without time zone,text)
   to anon, authenticated;
 
