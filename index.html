@@ -3309,8 +3309,8 @@ if ('serviceWorker' in navigator) {
                     <span class="text-xs rounded-full px-3 py-1 bg-green-50 text-green-700" id="academicPeriodCurrent">Memuat periode aktif...</span>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterTargetYear">Tahun ajaran</label><input id="semesterTargetYear" value="2026/2027" placeholder="2026/2027" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterTargetTerm">Semester tujuan</label><select id="semesterTargetTerm" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><option value="Ganjil">Ganjil</option><option value="Genap" selected>Genap</option></select></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterTargetYear">Tahun ajaran</label><input id="semesterTargetYear" value="2026/2027" placeholder="2026/2027" onchange="this.dataset.touched='true'" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterTargetTerm">Semester tujuan</label><select id="semesterTargetTerm" onchange="this.dataset.touched='true'" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><option value="Ganjil">Ganjil</option><option value="Genap" selected>Genap</option></select></div>
                 </div>
                 <div class="border border-dashed border-gray-300 rounded-xl p-4 space-y-3">
                     <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterExcelFile">File jadwal (.xlsx, .xls, atau .csv)</label><input id="semesterExcelFile" type="file" accept=".xlsx,.xls,.csv" onchange="previewSemesterImport()" class="block w-full text-sm text-gray-600"></div>
@@ -3353,7 +3353,7 @@ if ('serviceWorker' in navigator) {
             if(activeAcademicPeriod) {
                 const year=document.getElementById('semesterTargetYear');
                 const term=document.getElementById('semesterTargetTerm');
-                if(year && !year.value) year.value=activeAcademicPeriod.tahun_ajaran;
+                if(year && !year.dataset.touched) year.value=activeAcademicPeriod.tahun_ajaran;
                 if(term && !term.dataset.touched) term.value=activeAcademicPeriod.semester==='Ganjil'?'Genap':'Ganjil';
             }
         }
