@@ -29,6 +29,16 @@ Kode akses koordinator terdiri dari enam karakter alfanumerik. Skrip `SIKUR_10_K
 
 `SIKUR_11_ROTASI_KODE_KOORDINATOR.sql` adalah skrip rotasi manual untuk membatalkan sesi koordinator lama dan menghasilkan kode baru. Skrip rotasi dan pembaruan PIN menggunakan bcrypt work factor 12 untuk hash PIN yang dibuat setelah pembaruan.
 
+## Jadwal Khusus Sekolah
+
+Menu **Jadwal Khusus** digunakan Admin/Waka Kurikulum untuk mengatur perubahan waktu KBM pada tanggal kegiatan tertentu. Satu pengaturan berlaku seragam untuk seluruh kelas. JP dapat diubah waktu mulai/selesainya atau dinonaktifkan pada tanggal tersebut.
+
+- Jadwal mingguan reguler tidak ditimpa dan otomatis digunakan kembali di luar tanggal khusus.
+- Dashboard, Jadwal Saya Hari Ini, dampak ketidakhadiran, dan PantauKBM mengikuti waktu khusus pada tanggal yang berlaku.
+- Pengaturan disimpan pada tabel `sikur_jadwal_khusus` di Supabase dan disinkronkan antarpengguna melalui Realtime.
+- Semua pengguna yang sudah login dapat membaca jadwal khusus; hanya role `admin` dan `waka` yang dapat membuat, mengubah, atau menghapus data.
+- Jalankan `SIKUR_13_JADWAL_KHUSUS.sql` setelah `SIKUR_12_HARDENING_PANTAUKBM.sql` pada proyek Supabase yang benar.
+
 ## Catatan keamanan dan penerapan
 
 - Jalankan SQL hanya setelah memeriksa target proyek Supabase dan membuat backup.
