@@ -2554,6 +2554,10 @@
                 document.getElementById('passwordUpdatePanel').classList.add('hidden');
                 document.getElementById('loginForm').classList.remove('hidden');
                 document.getElementById('loginPassword').value = '';
+                const loginMessage = document.getElementById('loginError');
+                loginMessage.textContent = 'Kata sandi berhasil diperbarui. Silakan masuk menggunakan kata sandi baru.';
+                loginMessage.className = 'text-sm bg-green-50 border border-green-200 text-green-700 rounded-lg p-3';
+                loginMessage.classList.remove('hidden');
             } catch (error) {
                 message.className = 'text-sm rounded-lg p-3 bg-red-50 text-red-700';
                 message.textContent = error?.message || 'Kata sandi gagal diperbarui.';
