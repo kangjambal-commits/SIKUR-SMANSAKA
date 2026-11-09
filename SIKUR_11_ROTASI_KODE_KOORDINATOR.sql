@@ -1,7 +1,8 @@
 -- SIKUR 11 - Rotasi aman kode akses PantauKBM
--- Jalankan satu kali di Supabase SQL Editor setelah SIKUR_10.
+-- Jalankan hanya ketika seluruh kode akses koordinator perlu dirotasi.
 -- Skrip menghasilkan kode baru untuk 27 kelas, menyimpan hash saja,
 -- menghapus sesi lama, lalu menampilkan kode satu kali pada hasil query.
+-- Tindakan ini langsung membatalkan seluruh sesi koordinator yang sedang aktif.
 -- Simpan hasil query di tempat aman dan bagikan hanya kepada koordinator terkait.
 
 create extension if not exists pgcrypto with schema extensions;
