@@ -1762,7 +1762,8 @@
 
         // CRUCIAL: Find Candidates logic as requested
         function findCandidates(jadwalId, tanggal) {
-            const jTarget = vSikurJadwalLengkap.find(j => j.id === jadwalId);
+            const jTarget = getScheduleRowForDate(jadwalId,tanggal);
+            if(!jTarget) return alert('Slot tersebut dinonaktifkan pada jadwal khusus atau tidak ditemukan.');
             const loader = document.getElementById('candidateLoader');
             loader.classList.remove('hidden');
 
@@ -1839,8 +1840,8 @@
 
         async function tetapkanPengganti(jadwalId, guruPenggantiId, tanggal) {
             if(!roleCanWriteOperational()) return alert('Akun ini tidak memiliki izin menetapkan guru pengganti.');
-            const jTarget = vSikurJadwalLengkap.find(j => j.id === jadwalId);
-            if(!jTarget) return alert('Slot jadwal tidak ditemukan.');
+            const jTarget = getScheduleRowForDate(jadwalId,tanggal);
+            if(!jTarget) return alert('Slot dinonaktifkan pada jadwal khusus atau tidak ditemukan.');
 
             const duplicate = statePengganti.find(p => Number(p.jadwal_id) === Number(jadwalId) && p.tanggal === tanggal);
             if(duplicate) return alert('Slot ini sudah memiliki guru pengganti. Sinkronkan data bila tampilan belum diperbarui.');
@@ -1896,7 +1897,8 @@
         // 9. PENGUMUMAN WHATSAPP
         // ==========================================
         function generateWAAnnouncement(jadwalId, guruPenggantiId, tanggal) {
-            const jTarget = vSikurJadwalLengkap.find(j => j.id === jadwalId);
+            const jTarget = getScheduleRowForDate(jadwalId,tanggal);
+            if(!jTarget) return alert('Slot dinonaktifkan pada jadwal khusus atau tidak ditemukan.');
             const guruAsli = dbGuru.find(g => g.id === jTarget.guru_id);
             const guruPengganti = dbGuru.find(g => g.id === guruPenggantiId);
 
@@ -2520,10 +2522,13 @@ if ('serviceWorker' in navigator) {
 
         function showAssignmentWA(id) {
             const p=statePengganti.find(x=>String(x.id)===String(id)); if(!p) return;
-            const j=vSikurJadwalLengkap.find(x=>String(x.id)===String(p.jadwal_id))||{};
+            const base=vSikurJadwalLengkap.find(x=>String(x.id)===String(p.jadwal_id))||{};
+            const j=getScheduleRowForDate(p.jadwal_id,p.tanggal)||base;
+            const disabled=base.id && specialScheduleFind(p.tanggal) && !applySpecialScheduleToRows([base],p.tanggal).length;
             const gp=dbGuru.find(g=>g.id===p.guru_pengganti_id)||{};
             const abs=stateKetidakhadiran.find(a=>a.tanggal===p.tanggal && a.guru_id===j.guru_id)||{};
-            const text=`INFORMASI GURU PENGGANTI\n\nTanggal: ${formatDateID(p.tanggal)}\nGuru tidak hadir: ${j.guru_nama||'-'}\nAlasan: ${abs.alasan||'-'}\nKelas: ${j.kelas_nama||'-'}\nJP: ${j.jam_ke||'-'} (${j.waktu_mulai||'-'}–${j.waktu_selesai||'-'})\nMata pelajaran: ${j.mapel_nama||'-'}\nGuru pengganti: ${gp.nama||'-'}\n\nMohon dapat dilaksanakan sebagaimana mestinya. Terima kasih.`;
+            const waktuText=disabled?'Ditiadakan pada jadwal khusus':(j.waktu_mulai||'-')+'–'+(j.waktu_selesai||'-');
+            const text=`INFORMASI GURU PENGGANTI\n\nTanggal: ${formatDateID(p.tanggal)}\nGuru tidak hadir: ${j.guru_nama||'-'}\nAlasan: ${abs.alasan||'-'}\nKelas: ${j.kelas_nama||'-'}\nJP: ${j.jam_ke||'-'} (${waktuText})\nMata pelajaran: ${j.mapel_nama||'-'}\nGuru pengganti: ${gp.nama||'-'}\n\nMohon dapat dilaksanakan sebagaimana mestinya. Terima kasih.`;
             document.getElementById('waTextContent').value=text;
             document.getElementById('modalWA').classList.remove('hidden');
         }
@@ -3430,6 +3435,12 @@ if ('serviceWorker' in navigator) {
             if(error) return alert('Gagal menghapus jadwal khusus: '+error.message);
             await loadSpecialSchedules(true);
             resetSpecialScheduleForm();
+        }
+
+        function getScheduleRowForDate(jadwalId,date) {
+            const base=vSikurJadwalLengkap.find(row=>String(row.id)===String(jadwalId));
+            if(!base) return null;
+            return applySpecialScheduleToRows([base],date)[0] || null;
         }
 
         function applySpecialScheduleToRows(rows,date) {
