@@ -27,11 +27,13 @@ Setelah pengguna membuka tautan, aplikasi menangani event `PASSWORD_RECOVERY` da
 
 Kode akses koordinator terdiri dari enam karakter alfanumerik. Skrip `SIKUR_10_KODE_ACAK_PANTAUKBM.sql` menghasilkan kode acak dan menampilkan hasilnya hanya pada hasil SQL Editor. Jangan menaruh kode akses aktif dalam repositori publik.
 
-`SIKUR_11_ROTASI_KODE_KOORDINATOR.sql` adalah skrip rotasi manual untuk membatalkan sesi koordinator lama dan menghasilkan kode baru.
+`SIKUR_11_ROTASI_KODE_KOORDINATOR.sql` adalah skrip rotasi manual untuk membatalkan sesi koordinator lama dan menghasilkan kode baru. Skrip rotasi dan pembaruan PIN menggunakan bcrypt work factor 12 untuk hash PIN yang dibuat setelah pembaruan.
 
 ## Catatan keamanan dan penerapan
 
 - Jalankan SQL hanya setelah memeriksa target proyek Supabase dan membuat backup.
 - Setelah rotasi kode, simpan hasil kode di tempat aman dan bagikan secara privat per kelas.
-- Kebijakan `sikur_state` pada setup v4 membatasi penulisan penuh ke role `admin` dan `waka`.
+- Kebijakan `sikur_state` membatasi akses ke role `admin` dan `waka`; tabel sesi serta pembatasan login PantauKBM tidak dapat dibaca langsung melalui API.
+- `SIKUR_12_HARDENING_PANTAUKBM.sql` mengonsolidasikan penguatan RLS, hak akses RPC, validasi kode kelas, verifikasi token, keamanan view jadwal, dan indeks relasi. Jalankan setelah skrip `SIKUR_09`, `SIKUR_10`, dan `SIKUR_11`. Skrip ini tidak merotasi kode koordinator.
+- Hash PIN yang sudah tersimpan tidak diubah oleh hardening ini. Hash dengan work factor 12 diterapkan saat PIN berikutnya diatur ulang atau dirotasi.
 - Perubahan pada branch pemeliharaan harus diuji melalui deployment preview sebelum digabungkan ke `main`.
