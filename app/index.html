@@ -7,6 +7,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Google Fonts: Inter -->
@@ -90,7 +91,7 @@
 
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1e3a8a">
-<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
 </head>
 <body class="text-gray-800 h-screen flex overflow-hidden bg-gray-50">
     <div id="authOverlay" class="fixed inset-0 z-[100] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -105,7 +106,6 @@
                 <div><label class="text-sm font-medium text-gray-700">Kata sandi</label><input id="loginPassword" type="password" required autocomplete="current-password" class="mt-1 w-full border rounded-lg px-3 py-2.5" placeholder="••••••••"></div>
                 <div id="loginError" class="hidden text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg p-3"></div>
                 <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg">Masuk</button>
-                <button type="button" onclick="forgotPasswordSIKUR()" class="w-full text-sm text-blue-700 hover:underline mt-2">Lupa kata sandi?</button>
             </form>
             <button type="button" onclick="sendSIKURPasswordRecovery()" class="w-full mt-3 text-sm text-blue-700 hover:text-blue-900 font-medium">Lupa kata sandi?</button>
             <div id="passwordUpdatePanel" class="hidden mt-4 border-t pt-4">
@@ -153,6 +153,16 @@
                 <li>
                     <a href="#" onclick="navigateTo('jadwal')" id="nav-jadwal" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors">
                         <i class="ph ph-calendar-blank text-xl"></i> Jadwal Pelajaran
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="navigateTo('jadwal-khusus')" id="nav-jadwal-khusus" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors">
+                        <i class="ph ph-calendar-star text-xl"></i> Jadwal Khusus
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="navigateTo('pesan-kelas')" id="nav-pesan-kelas" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-blue-100 hover:bg-blue-800 hover:text-white transition-colors">
+                        <i class="ph ph-megaphone-simple text-xl"></i> Pesan Kelas
                     </a>
                 </li>
                 <li>
@@ -283,7 +293,7 @@
                     </div>
                     <div class="text-right hidden sm:block">
                         <p class="text-sm font-medium text-gray-600" id="currentDateDisplay">Senin, 1 Jan 2024</p>
-                        <p class="text-xs text-gray-400">Tahun Ajaran 2026/2027 • Semester Ganjil</p>
+                        <p class="text-xs text-gray-400" id="academicPeriodHeader">Memuat periode aktif...</p>
                     </div>
                 </div>
 
@@ -294,7 +304,7 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <!-- Today's Schedule -->
-                    <div id="dashboardTodayCard" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5 lg:col-span-2 flex flex-col h-[430px] sm:h-96">
+                    <div id="dashboardTodayCard" class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5 lg:col-span-2 flex flex-col h-[430px]">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-bold text-gray-800 flex items-center gap-2">
                                 <i class="ph ph-calendar-check text-blue-500 text-xl"></i> Jadwal KBM Hari Ini <span id="dashboardScheduleCount" class="text-xs font-normal text-gray-400"></span>
@@ -305,7 +315,7 @@
                             <table class="w-full min-w-[720px] text-sm text-left">
                                 <thead class="text-xs text-gray-500 uppercase bg-gray-50 sticky top-0">
                                     <tr>
-                                        <th class="px-4 py-2 rounded-tl-lg">Jam Pembelajaran</th>
+                                        <th class="px-4 py-2 rounded-tl-lg">JP</th>
                                         <th class="px-4 py-2">Waktu</th>
                                         <th class="px-3 sm:px-4 py-2 min-w-[100px]">Kelas</th>
                                         <th class="px-4 py-2">Mapel</th>
@@ -421,9 +431,126 @@
                             </tbody>
                         </table>
                     </div>
+                    <div id="jadwalPagination" class="border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600"></div>
                     <div id="jadwalLoading" class="hidden p-8 flex justify-center items-center">
                         <div class="loader"></div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Jadwal Khusus Sekolah -->
+            <section id="sec-jadwal-khusus" class="hidden fade-in space-y-6">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Jadwal Khusus Sekolah</h2>
+                        <p class="text-sm text-gray-500 mt-1">Pengaturan waktu KBM untuk tanggal kegiatan tertentu. Berlaku sama bagi seluruh kelas dan tidak mengubah jadwal reguler.</p>
+                    </div>
+                    <button id="btnNewSpecialSchedule" onclick="openNewSpecialSchedule()" class="hidden bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Buat Jadwal Khusus</button>
+                </div>
+                <div id="specialScheduleEditor" class="hidden bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <h3 id="specialScheduleFormTitle" class="font-semibold text-gray-800">Pengaturan Jadwal Khusus</h3>
+                        <span class="text-xs text-blue-700 bg-blue-50 rounded-full px-2 py-1">Semua kelas</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label for="specialScheduleDate" class="block text-sm font-medium text-gray-700 mb-1">Tanggal berlaku</label>
+                            <input id="specialScheduleDate" type="date" onchange="specialScheduleDateChanged()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label for="specialScheduleName" class="block text-sm font-medium text-gray-700 mb-1">Nama kegiatan</label>
+                            <input id="specialScheduleName" maxlength="120" placeholder="Contoh: Upacara, IHT, atau kegiatan sekolah" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="specialScheduleNotes" class="block text-sm font-medium text-gray-700 mb-1">Keterangan (opsional)</label>
+                        <textarea id="specialScheduleNotes" rows="2" maxlength="500" placeholder="Keterangan tambahan untuk guru dan peserta didik" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+                            <h4 class="font-semibold text-sm text-gray-800">Pengaturan Waktu JP</h4>
+                            <p class="text-xs text-gray-500">Hilangkan centang jika JP ditiadakan pada tanggal tersebut.</p>
+                        </div>
+                        <div id="specialScheduleTimes" class="space-y-2"></div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="saveSpecialSchedule()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">Simpan Jadwal Khusus</button>
+                        <button onclick="resetSpecialScheduleForm()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm">Batal / Bersihkan</button>
+                        <span id="specialScheduleMessage" class="text-sm self-center text-gray-500"></span>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 border-b border-gray-100">
+                        <h3 class="font-semibold text-gray-800">Daftar Jadwal Khusus</h3>
+                        <p class="text-xs text-gray-500 mt-1">Jadwal hanya aktif pada tanggal yang ditentukan. Di luar tanggal itu, SIKUR menggunakan jadwal reguler.</p>
+                    </div>
+                    <div id="specialScheduleList" class="p-4 space-y-3">
+                        <p class="text-sm text-gray-400">Memuat data jadwal khusus...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pesan untuk Kelas -->
+            <section id="sec-pesan-kelas" class="hidden fade-in space-y-6">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Pesan Kelas</h2>
+                        <p class="text-sm text-gray-500 mt-1">Kirim pengumuman kepada satu kelas, beberapa kelas, atau seluruh kelas melalui PantauKBM.</p>
+                    </div>
+                    <button id="btnNewClassMessage" onclick="openClassMessageForm()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Tulis Pesan</button>
+                </div>
+                <div id="classMessageEditor" class="hidden bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <h3 id="classMessageFormTitle" class="font-semibold text-gray-800">Tulis Pesan Baru</h3>
+                        <span class="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700">PantauKBM</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label for="classMessageTitle" class="block text-sm font-medium text-gray-700 mb-1">Judul pesan</label>
+                            <input id="classMessageTitle" maxlength="120" placeholder="Contoh: Perubahan ruang KBM" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label for="classMessagePriority" class="block text-sm font-medium text-gray-700 mb-1">Tingkat kepentingan</label>
+                            <select id="classMessagePriority" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="biasa">Biasa</option>
+                                <option value="penting">Penting</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="classMessageBody" class="block text-sm font-medium text-gray-700 mb-1">Isi pesan</label>
+                        <textarea id="classMessageBody" rows="5" maxlength="3000" placeholder="Tuliskan informasi yang perlu diketahui peserta didik..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <label class="block text-sm font-medium text-gray-700">Tujuan kelas</label>
+                            <label class="inline-flex items-center gap-2 text-sm font-semibold text-blue-700"><input id="classMessageAll" type="checkbox" class="w-4 h-4" onchange="toggleClassMessageAll()"> Seluruh kelas</label>
+                        </div>
+                        <div id="classMessageTargets" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 border border-gray-200 rounded-lg p-3 max-h-52 overflow-y-auto"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label for="classMessageStart" class="block text-sm font-medium text-gray-700 mb-1">Mulai ditampilkan</label>
+                            <input id="classMessageStart" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label for="classMessageEnd" class="block text-sm font-medium text-gray-700 mb-1">Berakhir ditampilkan (opsional)</label>
+                            <input id="classMessageEnd" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700"><input id="classMessageActive" type="checkbox" checked class="w-4 h-4"> Tampilkan pesan kepada kelas</label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="saveClassMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Simpan Pesan</button>
+                        <button onclick="resetClassMessageForm()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Batal</button>
+                        <span id="classMessageFeedback" class="text-sm text-gray-500"></span>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 border-b border-gray-100">
+                        <h3 class="font-semibold text-gray-800">Riwayat Pesan</h3>
+                        <p class="text-xs text-gray-500 mt-1">Pesan aktif akan muncul pada PantauKBM sesuai kelas dan tanggal berlakunya.</p>
+                    </div>
+                    <div id="classMessageList" class="p-4 space-y-3"><p class="text-sm text-gray-400">Memuat pesan...</p></div>
                 </div>
             </section>
 
@@ -613,7 +740,7 @@
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[1050px] text-sm">
                             <thead class="bg-gray-100 text-xs uppercase text-gray-600"><tr>
-                                <th class="p-3 text-left">Jam Pembelajaran</th><th class="p-3 text-left">Kelas</th><th class="p-3 text-left">Guru</th><th class="p-3 text-left">Status Laporan</th><th class="p-3 text-left">Jam Masuk</th><th class="p-3 text-left">Jam Keluar</th><th class="p-3 text-left">Keterangan</th><th class="p-3 text-left">Verifikasi Waka/Admin</th>
+                                <th class="p-3 text-left">JP</th><th class="p-3 text-left">Kelas</th><th class="p-3 text-left">Guru</th><th class="p-3 text-left">Status Laporan</th><th class="p-3 text-left">Jam Masuk</th><th class="p-3 text-left">Jam Keluar</th><th class="p-3 text-left">Keterangan</th><th class="p-3 text-left">Verifikasi Waka/Admin</th>
                             </tr></thead>
                             <tbody id="monitoringBody" class="divide-y divide-gray-100"></tbody>
                         </table>
@@ -625,7 +752,7 @@
             <section id="sec-piket" class="hidden fade-in space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">Guru Piket KBM</h2>
-                    <p class="text-sm text-gray-500 mt-1">Semester Ganjil TA 2026/2027 • Lampiran 14 SK Kepala SMA Negeri 1 Karangreja, 1 Juli 2026.</p>
+                    <p class="text-sm text-gray-500 mt-1">Daftar petugas piket ditetapkan melalui SK tersendiri dan perlu ditinjau setiap pergantian semester.</p>
                 </div>
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                     <div class="flex flex-wrap gap-2 mb-4" id="piketDayTabs"></div>
@@ -1035,7 +1162,7 @@
 
         function navigateTo(sectionId) {
             // Hide all sections
-            const sections = ['dashboard', 'jadwal', 'jadwal-saya', 'beban', 'bentrok', 'absensi', 'pengganti', 'monitoring', 'piket', 'master'];
+            const sections = ['dashboard', 'jadwal', 'jadwal-khusus', 'pesan-kelas', 'jadwal-saya', 'beban', 'bentrok', 'absensi', 'pengganti', 'monitoring', 'piket', 'master'];
             sections.forEach(s => {
                 document.getElementById(`sec-${s}`).classList.add('hidden');
                 document.getElementById(`nav-${s}`).classList.remove('bg-blue-800', 'text-white', 'font-medium');
@@ -1049,6 +1176,8 @@
 
             // Trigger specific renders
             if(sectionId === 'jadwal') renderJadwal();
+            if(sectionId === 'jadwal-khusus') renderSpecialSchedules();
+            if(sectionId === 'pesan-kelas') { loadClassMessages(); renderClassMessageTargets(); }
             if(sectionId === 'jadwal-saya') renderJadwalSayaHariIni();
             if(sectionId === 'beban') renderBebanMengajar();
             if(sectionId === 'bentrok') runCollisionDetection();
@@ -1147,7 +1276,9 @@
             document.getElementById('dashboardStats').innerHTML = statsHtml;
 
             // Load Today's Schedule (showing a subset for UI purposes, e.g., current active ones, mocked as top 10)
-            const todaySched = vSikurJadwalLengkap.filter(j => j.hari === currentDay).sort((a,b) => (a.jam_ke - b.jam_ke) || String(a.kelas_nama).localeCompare(String(b.kelas_nama),'id'));
+            const todayKey = monitoringTodayWIB();
+            const todaySched = applySpecialScheduleToRows(vSikurJadwalLengkap.filter(j => j.hari === currentDay), todayKey).sort((a,b) => (a.jam_ke - b.jam_ke) || String(a.kelas_nama).localeCompare(String(b.kelas_nama),'id'));
+            renderSpecialScheduleDashboardBanner(todayKey);
             const tbody = document.getElementById('dashboardScheduleBody');
             const emptyBox = document.getElementById('dashboardScheduleEmpty');
             const countLabel = document.getElementById('dashboardScheduleCount');
@@ -1196,11 +1327,21 @@
             renderJadwal();
         }
 
+        let jadwalPage = 0;
+        let jadwalFilterKey = '';
+
+        function pindahHalamanJadwal(page) {
+            jadwalPage = page;
+            renderJadwal();
+        }
+
         function renderJadwal() {
             const tbody = document.getElementById('jadwalTableBody');
+            const pagination = document.getElementById('jadwalPagination');
             const loading = document.getElementById('jadwalLoading');
             
             tbody.innerHTML = '';
+            pagination.innerHTML = '';
             loading.classList.remove('hidden');
 
             setTimeout(() => {
@@ -1222,9 +1363,17 @@
                     return a.jam_ke - b.jam_ke;
                 });
 
-                // Limit output to prevent UI freeze on large datasets if no filters
-                const displayLimit = 100; 
-                const displayData = filtered.slice(0, displayLimit);
+                // Tampilkan seluruh hasil melalui halaman agar tabel tetap ringan.
+                const displayLimit = 100;
+                const filterKey = JSON.stringify([hari, kelasId, guruId, mode]);
+                if (filterKey !== jadwalFilterKey) {
+                    jadwalPage = 0;
+                    jadwalFilterKey = filterKey;
+                }
+                const totalPages = Math.max(1, Math.ceil(filtered.length / displayLimit));
+                jadwalPage = Math.min(Math.max(0, jadwalPage), totalPages - 1);
+                const start = jadwalPage * displayLimit;
+                const displayData = filtered.slice(start, start + displayLimit);
 
                 if (displayData.length === 0) {
                      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500">Tidak ada data jadwal ditemukan.</td></tr>`;
@@ -1243,7 +1392,11 @@
                     `).join('');
                     
                     if(filtered.length > displayLimit) {
-                         tbody.innerHTML += `<tr><td colspan="6" class="text-center py-3 text-xs text-gray-400 bg-gray-50">Menampilkan ${displayLimit} dari ${filtered.length} data. Gunakan filter untuk pencarian spesifik.</td></tr>`;
+                         pagination.innerHTML = `<div class="flex flex-wrap items-center justify-center gap-3">
+                                 <button type="button" onclick="pindahHalamanJadwal(${jadwalPage - 1})" ${jadwalPage === 0 ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">Sebelumnya</button>
+                                 <span>Data ${start + 1}–${start + displayData.length} dari ${filtered.length} · Halaman ${jadwalPage + 1}/${totalPages}</span>
+                                 <button type="button" onclick="pindahHalamanJadwal(${jadwalPage + 1})" ${jadwalPage === totalPages - 1 ? 'disabled' : ''} class="px-3 py-1 rounded border bg-white text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">Berikutnya</button>
+                             </div>`;
                     }
                 }
                 loading.classList.add('hidden');
@@ -1437,9 +1590,7 @@
             if(!tanggal || !guruId) return;
 
             // Get day name from date
-            const dateObj = new Date(tanggal);
-            const hariNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            const hari = hariNames[dateObj.getDay()];
+            const hari = getHariFromDate(tanggal);
 
             document.getElementById('dampakHariLabel').innerText = `${hari}, ${tanggal}`;
 
@@ -1450,7 +1601,7 @@
                 return;
             }
 
-            const jadwalTerdampak = vSikurJadwalLengkap.filter(j => j.guru_id === guruId && j.hari === hari).sort((a,b) => a.jam_ke - b.jam_ke);
+            const jadwalTerdampak = applySpecialScheduleToRows(vSikurJadwalLengkap.filter(j => j.guru_id === guruId && j.hari === hari), tanggal).sort((a,b) => a.jam_ke - b.jam_ke);
             
             const tbody = document.getElementById('dampakTableBody');
             if(jadwalTerdampak.length === 0) {
@@ -1604,7 +1755,7 @@
             document.getElementById('invalCandidateTarget').innerText = "Pilih salah satu jam pelajaran di samping";
 
             // Load Jadwal Terdampak
-            const jadwalTerdampak = vSikurJadwalLengkap.filter(j => j.guru_id === guru.id && j.hari === hari).sort((x,y) => x.jam_ke - y.jam_ke);
+            const jadwalTerdampak = applySpecialScheduleToRows(vSikurJadwalLengkap.filter(j => j.guru_id === guru.id && j.hari === hari), a.tanggal).sort((x,y) => x.jam_ke - y.jam_ke);
             document.getElementById('invalTotalJP').innerText = `${jadwalTerdampak.length} JP`;
 
             const listContainer = document.getElementById('invalJadwalList');
@@ -1648,7 +1799,7 @@
             if(firstPending) findCandidates(firstPending.id, a.tanggal);
         }
 
-        // Jadwal Piket KBM Semester Ganjil TA 2026/2027 (Lampiran 14 SK Kepala Sekolah, 1 Juli 2026).
+        // Dataset awal jadwal piket KBM (Lampiran 14 SK Kepala Sekolah, 1 Juli 2026); tinjau kembali untuk periode berjalan.
         // Drs. Klino Hery Styawan tidak dimasukkan karena sudah pensiun.
         const dbPiketKbm = {
             Senin: ['ARIEF','MUFID','YULIYA','ETI','ANISA','KATWANG','SAEFUL','AAS','LILIN','IIN','WIMBO','TARI'],
@@ -1682,7 +1833,8 @@
 
         // CRUCIAL: Find Candidates logic as requested
         function findCandidates(jadwalId, tanggal) {
-            const jTarget = vSikurJadwalLengkap.find(j => j.id === jadwalId);
+            const jTarget = getScheduleRowForDate(jadwalId,tanggal);
+            if(!jTarget) return alert('Slot tersebut dinonaktifkan pada jadwal khusus atau tidak ditemukan.');
             const loader = document.getElementById('candidateLoader');
             loader.classList.remove('hidden');
 
@@ -1759,8 +1911,8 @@
 
         async function tetapkanPengganti(jadwalId, guruPenggantiId, tanggal) {
             if(!roleCanWriteOperational()) return alert('Akun ini tidak memiliki izin menetapkan guru pengganti.');
-            const jTarget = vSikurJadwalLengkap.find(j => j.id === jadwalId);
-            if(!jTarget) return alert('Slot jadwal tidak ditemukan.');
+            const jTarget = getScheduleRowForDate(jadwalId,tanggal);
+            if(!jTarget) return alert('Slot dinonaktifkan pada jadwal khusus atau tidak ditemukan.');
 
             const duplicate = statePengganti.find(p => Number(p.jadwal_id) === Number(jadwalId) && p.tanggal === tanggal);
             if(duplicate) return alert('Slot ini sudah memiliki guru pengganti. Sinkronkan data bila tampilan belum diperbarui.');
@@ -1816,7 +1968,8 @@
         // 9. PENGUMUMAN WHATSAPP
         // ==========================================
         function generateWAAnnouncement(jadwalId, guruPenggantiId, tanggal) {
-            const jTarget = vSikurJadwalLengkap.find(j => j.id === jadwalId);
+            const jTarget = getScheduleRowForDate(jadwalId,tanggal);
+            if(!jTarget) return alert('Slot dinonaktifkan pada jadwal khusus atau tidak ditemukan.');
             const guruAsli = dbGuru.find(g => g.id === jTarget.guru_id);
             const guruPengganti = dbGuru.find(g => g.id === guruPenggantiId);
 
@@ -2061,7 +2214,12 @@
             const w = window.open('', '_blank');
             if (!w) { alert('Izinkan pop-up browser untuk mencetak jadwal.'); return; }
             const trs = rows.map(j => `<tr><td>${j.hari}</td><td>${j.jam_ke}</td><td>${j.waktu_mulai}–${j.waktu_selesai}</td><td>${j.kelas_nama}</td><td>${j.mapel_nama}</td><td>${j.guru_nama}</td></tr>`).join('');
-            w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:24px}h1{font-size:20px}p{font-size:12px;color:#555}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #999;padding:5px;text-align:left}th{background:#eee}@media print{button{display:none}}</style></head><body><h1>${title}</h1><p>SIKUR SMA Negeri 1 Karangreja • Tahun Ajaran 2026/2027 • Semester Ganjil</p><table><thead><tr><th>Hari</th><th>JP</th><th>Waktu</th><th>Kelas</th><th>Mata Pelajaran</th><th>Guru</th></tr></thead><tbody>${trs}</tbody></table><script>window.onload=()=>window.print()<\/script>
+            w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:24px}h1{font-size:20px}p{font-size:12px;color:#555}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #999;padding:5px;text-align:left}th{background:#eee}@media print{button{display:none}}</style></head><body><h1>${title}</h1><p>SIKUR SMA Negeri 1 Karangreja • ${specialScheduleEsc(getAcademicPeriodLabel())}</p><table><thead><tr><th>Hari</th><th>JP</th><th>Waktu</th><th>Kelas</th><th>Mata Pelajaran</th><th>Guru</th></tr></thead><tbody>${trs}</tbody></table><script>window.onload=()=>window.print()<\/script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.error));
+}
+<\/script>
 </body></html>`);
             w.document.close();
         }
@@ -2305,7 +2463,7 @@
 
         function getAffectedForAbsence(abs) {
             const hari = getHariFromDate(abs.tanggal);
-            return vSikurJadwalLengkap.filter(j => j.hari === hari && j.guru_id === abs.guru_id);
+            return applySpecialScheduleToRows(vSikurJadwalLengkap.filter(j => j.hari === hari && j.guru_id === abs.guru_id), abs.tanggal);
         }
 
         function getSubForSlot(abs, jadwalId) {
@@ -2435,10 +2593,13 @@
 
         function showAssignmentWA(id) {
             const p=statePengganti.find(x=>String(x.id)===String(id)); if(!p) return;
-            const j=vSikurJadwalLengkap.find(x=>String(x.id)===String(p.jadwal_id))||{};
+            const base=vSikurJadwalLengkap.find(x=>String(x.id)===String(p.jadwal_id))||{};
+            const j=getScheduleRowForDate(p.jadwal_id,p.tanggal)||base;
+            const disabled=base.id && specialScheduleFind(p.tanggal) && !applySpecialScheduleToRows([base],p.tanggal).length;
             const gp=dbGuru.find(g=>g.id===p.guru_pengganti_id)||{};
             const abs=stateKetidakhadiran.find(a=>a.tanggal===p.tanggal && a.guru_id===j.guru_id)||{};
-            const text=`INFORMASI GURU PENGGANTI\n\nTanggal: ${formatDateID(p.tanggal)}\nGuru tidak hadir: ${j.guru_nama||'-'}\nAlasan: ${abs.alasan||'-'}\nKelas: ${j.kelas_nama||'-'}\nJP: ${j.jam_ke||'-'} (${j.waktu_mulai||'-'}–${j.waktu_selesai||'-'})\nMata pelajaran: ${j.mapel_nama||'-'}\nGuru pengganti: ${gp.nama||'-'}\n\nMohon dapat dilaksanakan sebagaimana mestinya. Terima kasih.`;
+            const waktuText=disabled?'Ditiadakan pada jadwal khusus':(j.waktu_mulai||'-')+'–'+(j.waktu_selesai||'-');
+            const text=`INFORMASI GURU PENGGANTI\n\nTanggal: ${formatDateID(p.tanggal)}\nGuru tidak hadir: ${j.guru_nama||'-'}\nAlasan: ${abs.alasan||'-'}\nKelas: ${j.kelas_nama||'-'}\nJP: ${j.jam_ke||'-'} (${waktuText})\nMata pelajaran: ${j.mapel_nama||'-'}\nGuru pengganti: ${gp.nama||'-'}\n\nMohon dapat dilaksanakan sebagaimana mestinya. Terima kasih.`;
             document.getElementById('waTextContent').value=text;
             document.getElementById('modalWA').classList.remove('hidden');
         }
@@ -2452,7 +2613,7 @@
                 const gp=dbGuru.find(g=>g.id===p.guru_pengganti_id)||{};
                 return `<tr><td>${formatDateID(p.tanggal)}</td><td>${j.guru_nama||'-'}</td><td>${j.jam_ke||p.jam_ke}</td><td>${j.kelas_nama||'-'}</td><td>${j.mapel_nama||'-'}</td><td>${gp.nama||'-'}</td></tr>`;
             }).join('');
-            w.document.write(`<!doctype html><html><head><title>Laporan Guru Pengganti</title><style>body{font-family:Arial;padding:24px}h1{font-size:20px}p{font-size:12px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #888;padding:6px}th{background:#eee}</style></head><body><h1>Laporan Guru Pengganti</h1><p>SMA Negeri 1 Karangreja • Tahun Ajaran 2026/2027 • Semester Ganjil</p><table><thead><tr><th>Tanggal</th><th>Guru Tidak Hadir</th><th>JP</th><th>Kelas</th><th>Mapel</th><th>Guru Pengganti</th></tr></thead><tbody>${trs}</tbody></table><script>window.onload=()=>window.print()<\/script></body></html>`);
+            w.document.write(`<!doctype html><html><head><title>Laporan Guru Pengganti</title><style>body{font-family:Arial;padding:24px}h1{font-size:20px}p{font-size:12px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #888;padding:6px}th{background:#eee}</style></head><body><h1>Laporan Guru Pengganti</h1><p>SMA Negeri 1 Karangreja • ${specialScheduleEsc(getAcademicPeriodLabel())}</p><table><thead><tr><th>Tanggal</th><th>Guru Tidak Hadir</th><th>JP</th><th>Kelas</th><th>Mapel</th><th>Guru Pengganti</th></tr></thead><tbody>${trs}</tbody></table><script>window.onload=()=>window.print()<\/script></body></html>`);
             w.document.close();
         }
 
@@ -2595,12 +2756,19 @@
             if(!sb) { if(showMessage) alert('Supabase belum terhubung.'); return; }
             try {
                 setSupabaseStatus(false,'Sinkronisasi…');
+                const periodResult=await sb.from('sikur_periode_semester').select('*').eq('aktif',true).maybeSingle();
+                if(periodResult.error) throw periodResult.error;
+                if(!periodResult.data) throw new Error('Belum ada periode semester aktif pada basis data.');
+                activeAcademicPeriod=periodResult.data;
+
                 // PostgREST/Supabase dapat membatasi satu respons sekitar 1000 baris.
                 // Jadwal resmi SIKUR >1000 baris, jadi ambil bertahap agar tidak terpotong.
                 async function fetchAllRows(table, orderColumn, ascending=true, pageSize=500) {
                     let rows=[], from=0;
                     while(true) {
-                        const {data,error}=await sb.from(table).select('*').order(orderColumn,{ascending}).range(from,from+pageSize-1);
+                        let query=sb.from(table).select('*').order(orderColumn,{ascending});
+                        if(table==='sikur_jadwal') query=query.eq('periode_id',activeAcademicPeriod.id);
+                        const {data,error}=await query.range(from,from+pageSize-1);
                         if(error) throw error;
                         rows.push(...(data||[]));
                         if(!data || data.length<pageSize) break;
@@ -2630,6 +2798,8 @@
                 localStorage.setItem('sikur_ketidakhadiran',JSON.stringify(stateKetidakhadiran));
                 localStorage.setItem('sikur_pengganti',JSON.stringify(statePengganti));
                 updateDashboardStats(); updateOperationalStats(); renderOperationalHistory(); renderAbsenceHistory();
+                updateAcademicPeriodLabels();
+                await loadAcademicPeriods(false);
                 setSupabaseStatus(true,'Terhubung');
                 if(showMessage) alert('Sinkronisasi Supabase selesai.');
             } catch(e) {
@@ -2673,6 +2843,9 @@
         // ==========================================
         let currentUser = null;
         let currentProfile = null;
+        let activeAcademicPeriod = null;
+        let stateAcademicPeriods = [];
+        let pendingSemesterImportRows = null;
 
         function roleCanWriteOperational() {
             return ['admin','waka','guru'].includes(currentProfile?.role);
@@ -2705,30 +2878,6 @@
             }
         }
 
-        async function forgotPasswordSIKUR() {
-            const err=document.getElementById('loginError');
-            const email=document.getElementById('loginEmail').value.trim();
-            if(!email) {
-                err.textContent='Masukkan email akun SIKUR terlebih dahulu.';
-                err.className='text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3';
-                return;
-            }
-            try {
-                if(!sb) {
-                    if(!window.supabase) throw new Error('Library Supabase tidak termuat. Periksa koneksi internet.');
-                    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
-                }
-                const redirectTo=window.location.origin+'/SIKUR-SMANSAKA/app/';
-                const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo});
-                if(error) throw error;
-                err.textContent='Tautan pemulihan kata sandi telah dikirim. Silakan periksa email Anda.';
-                err.className='text-sm bg-green-50 border border-green-200 text-green-800 rounded-lg p-3';
-            } catch(e) {
-                err.textContent=e.message||'Gagal mengirim tautan pemulihan kata sandi.';
-                err.className='text-sm bg-red-50 border border-red-200 text-red-700 rounded-lg p-3';
-            }
-        }
-
         async function loadCurrentProfile() {
             if(!currentUser) return;
             const {data,error}=await sb.from('sikur_profiles').select('*').eq('id',currentUser.id).single();
@@ -2747,6 +2896,11 @@
             document.querySelectorAll('[onclick*="showSection(\'master\'"]').forEach(el=>{
                 el.style.display=roleCanManageMaster()?'':'none';
             });
+            const navPesan=document.getElementById('nav-pesan-kelas');
+            if(navPesan) navPesan.closest('li').style.display=roleCanManageMaster()?'':'none';
+            const secPesan=document.getElementById('sec-pesan-kelas');
+            if(secPesan && !roleCanManageMaster()) secPesan.classList.add('hidden');
+
             const secMaster=document.getElementById('sec-master');
             if(secMaster && !roleCanManageMaster()) secMaster.classList.add('hidden');
 
@@ -2840,7 +2994,7 @@
             const now=new Date();
             const hari=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][now.getDay()];
             const tanggal=now.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-            const rows=vSikurJadwalLengkap.filter(j=>j.guru_id===kode && j.hari===hari).sort((a,b)=>Number(a.jam_ke)-Number(b.jam_ke));
+            const rows=applySpecialScheduleToRows(vSikurJadwalLengkap.filter(j=>j.guru_id===kode && j.hari===hari),monitoringTodayWIB()).sort((a,b)=>Number(a.jam_ke)-Number(b.jam_ke));
             info.innerHTML=`<b>${currentProfile?.nama||kode}</b> • ${tanggal} • <b>${rows.length} JP</b>`;
             if(!rows.length){
                 cards.innerHTML=`<div class="md:col-span-2 xl:col-span-3 bg-white border rounded-xl p-8 text-center text-gray-500"><i class="ph ph-calendar-check text-4xl text-green-500 block mb-2"></i>Tidak ada jadwal mengajar hari ini.</div>`;
@@ -3011,6 +3165,9 @@
                 .on('postgres_changes',{event:'*',schema:'public',table:'sikur_perubahan_ruang'},()=>loadCurriculumModulesFromSupabase())
                 .on('postgres_changes',{event:'*',schema:'public',table:'sikur_ketidakhadiran'},()=>syncFromSupabase(false))
                 .on('postgres_changes',{event:'*',schema:'public',table:'sikur_pengganti'},()=>syncFromSupabase(false))
+                .on('postgres_changes',{event:'*',schema:'public',table:'sikur_jadwal_khusus'},()=>loadSpecialSchedules(true))
+                .on('postgres_changes',{event:'*',schema:'public',table:'sikur_periode_semester'},()=>syncFromSupabase(false))
+                .on('postgres_changes',{event:'*',schema:'public',table:'sikur_pesan_kelas'},()=>loadClassMessages())
                 .subscribe();
         }
 
@@ -3075,22 +3232,24 @@
 
         async function replaceScheduleInSupabase(){
             if(!supabaseReady || !roleCanManageMaster()) return;
-            if(!confirm('Sinkronkan seluruh jadwal aktif ke Supabase?')) return;
-            setSupabaseStatus(false,'Sinkron jadwal…');
+            if(!activeAcademicPeriod) return alert('Periode semester aktif belum termuat.');
+            if(!confirm('Simpan perubahan jadwal sebagai versi baru untuk '+getAcademicPeriodLabel()+'? Versi sebelumnya tetap diarsipkan dan tidak dihapus.')) return;
+            setSupabaseStatus(false,'Menyimpan versi jadwal…');
             try{
                 const health=validateSIKURData(false);
                 if(health.errors.length) throw new Error('Jadwal belum lolos validasi: '+health.errors.join('; '));
-                const del=await sb.from('sikur_jadwal').delete().gt('id',0);
-                if(del.error) throw del.error;
                 const rows=dbJadwal.map(x=>({hari:x.hari,jam_ke:Number(x.jam_ke),kelas:x.kelas_id||x.kelas,kode_mapel:x.mapel_id||x.kode_mapel,kode_guru:x.guru_id||x.kode_guru}));
-                for(let i=0;i<rows.length;i+=300){
-                    const r=await sb.from('sikur_jadwal').insert(rows.slice(i,i+300));
-                    if(r.error) throw r.error;
-                }
+                const {data,error}=await sb.rpc('sikur_import_semester_schedule',{
+                    p_tahun_ajaran:activeAcademicPeriod.tahun_ajaran,
+                    p_semester:activeAcademicPeriod.semester,
+                    p_rows:rows
+                });
+                if(error) throw error;
                 await syncFromSupabase(false);
+                await loadAcademicPeriods(false);
                 setSupabaseStatus(true,'Terhubung');
-                alert('Jadwal berhasil disinkronkan ke Supabase.');
-            }catch(e){setSupabaseStatus(false,'Gagal sinkron');alert('Sinkronisasi jadwal dibatalkan/gagal: '+e.message);}
+                alert('Versi jadwal berhasil disimpan. Arsip sebelumnya tetap tersedia.');
+            }catch(e){setSupabaseStatus(false,'Gagal sinkron');alert('Penyimpanan jadwal dibatalkan/gagal: '+e.message);}
         }
 
         function validateSIKURData(show=true){
@@ -3117,9 +3276,262 @@
         }
 
         function downloadFullBackup(){
-            const backup={app:'SIKUR SMANSAKA',version:'2.4',created_at:new Date().toISOString(),master:{guru:dbGuru,kelas:dbKelas,mapel:dbMapel,jam_kbm:dbJamKbm,jadwal:dbJadwal},operasional:{ketidakhadiran:stateKetidakhadiran,pengganti:statePengganti,agenda:stateAgenda,pengumuman:stateAnnouncements,perubahan_ruang:stateRoomChanges}};
+            const backup={app:'SIKUR SMANSAKA',version:'2.5',created_at:new Date().toISOString(),periode_aktif:activeAcademicPeriod,master:{guru:dbGuru,kelas:dbKelas,mapel:dbMapel,jam_kbm:dbJamKbm,jadwal:dbJadwal},operasional:{ketidakhadiran:stateKetidakhadiran,pengganti:statePengganti,agenda:stateAgenda,pengumuman:stateAnnouncements,perubahan_ruang:stateRoomChanges}};
             const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),a=document.createElement('a');
             a.href=URL.createObjectURL(blob);a.download=`SIKUR_Backup_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);
+        }
+
+        // ==========================================
+        // 21. MANAJEMEN SEMESTER & IMPOR EXCEL
+        // ==========================================
+        function getAcademicPeriodLabel(period=activeAcademicPeriod) {
+            return period ? 'Tahun Ajaran '+period.tahun_ajaran+' • Semester '+period.semester : 'Periode semester belum diketahui';
+        }
+
+        function updateAcademicPeriodLabels() {
+            const label=getAcademicPeriodLabel();
+            const header=document.getElementById('academicPeriodHeader');
+            if(header) header.textContent=label;
+            const status=document.getElementById('academicPeriodCurrent');
+            if(status) status.textContent=activeAcademicPeriod ? label+' • Versi '+activeAcademicPeriod.versi : 'Periode aktif belum termuat';
+        }
+
+        function addAcademicPeriodControls() {
+            const master=document.getElementById('sec-master');
+            if(!master || document.getElementById('academicPeriodManager')) return;
+            const panel=document.createElement('div');
+            panel.id='academicPeriodManager';
+            panel.className='bg-white rounded-xl shadow-sm border border-blue-100 p-5 space-y-4';
+            panel.innerHTML=`
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div><h3 class="font-semibold text-gray-800 flex items-center gap-2"><i class="ph ph-calendar-check text-blue-600"></i> Periode Semester & Impor Jadwal</h3>
+                    <p class="text-sm text-gray-500 mt-1">Impor Excel untuk membuat jadwal semester baru. Jadwal sebelumnya tetap tersimpan sebagai arsip.</p></div>
+                    <span class="text-xs rounded-full px-3 py-1 bg-green-50 text-green-700" id="academicPeriodCurrent">Memuat periode aktif...</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterTargetYear">Tahun ajaran</label><input id="semesterTargetYear" value="2026/2027" placeholder="2026/2027" onchange="this.dataset.touched='true'" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterTargetTerm">Semester tujuan</label><select id="semesterTargetTerm" onchange="this.dataset.touched='true'" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><option value="Ganjil">Ganjil</option><option value="Genap" selected>Genap</option></select></div>
+                </div>
+                <div class="border border-dashed border-gray-300 rounded-xl p-4 space-y-3">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterExcelFile">File jadwal (.xlsx, .xls, atau .csv)</label><input id="semesterExcelFile" type="file" accept=".xlsx,.xls,.csv" onchange="previewSemesterImport()" class="block w-full text-sm text-gray-600"></div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="downloadSemesterTemplate()" class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium"><i class="ph ph-file-xls mr-1"></i> Unduh Template Excel</button>
+                        <button type="button" onclick="previewSemesterImport()" class="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium">Periksa File</button>
+                    </div>
+                    <div id="semesterImportPreview" class="text-sm text-gray-500">Unggah file jadwal untuk melihat pratinjau dan hasil validasi.</div>
+                    <button id="btnActivateImportedSemester" type="button" onclick="activateImportedSemester()" disabled class="bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-semibold">Validasi file terlebih dahulu</button>
+                </div>
+                <div class="space-y-2">
+                    <div><h4 class="font-semibold text-gray-800">Arsip Periode</h4><p class="text-xs text-gray-500">Pilih Aktifkan untuk kembali menggunakan jadwal semester terdahulu tanpa impor ulang.</p></div>
+                    <div id="academicPeriodArchive" class="space-y-2"><p class="text-sm text-gray-400">Memuat arsip...</p></div>
+                </div>
+                <p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-3">Catatan: daftar Guru Piket, wali kelas, dan pengaturan waktu JP tidak otomatis berubah saat semester diganti. Periksa pembaruan SK dan pengaturan waktunya secara terpisah.</p>
+            `;
+            const controls=document.getElementById('v24Controls');
+            if(controls) controls.insertAdjacentElement('afterend',panel);
+            else master.insertBefore(panel,master.children[1]||null);
+            updateAcademicPeriodLabels();
+            if(activeAcademicPeriod) {
+                document.getElementById('semesterTargetYear').value=activeAcademicPeriod.tahun_ajaran;
+                document.getElementById('semesterTargetTerm').value=activeAcademicPeriod.semester==='Ganjil'?'Genap':'Ganjil';
+            }
+        }
+
+        async function loadAcademicPeriods(showError=true) {
+            if(!sb || !currentUser) return;
+            const {data,error}=await sb.from('sikur_periode_semester').select('*').order('created_at',{ascending:false}).limit(40);
+            if(error) {
+                const box=document.getElementById('academicPeriodArchive');
+                if(box) box.innerHTML='<p class="text-sm text-red-600">Arsip periode gagal dimuat: '+specialScheduleEsc(error.message)+'</p>';
+                if(showError) console.warn('Arsip periode:',error);
+                return;
+            }
+            stateAcademicPeriods=data||[];
+            activeAcademicPeriod=stateAcademicPeriods.find(x=>x.aktif===true)||activeAcademicPeriod;
+            updateAcademicPeriodLabels();
+            renderAcademicPeriodArchive();
+            if(activeAcademicPeriod) {
+                const year=document.getElementById('semesterTargetYear');
+                const term=document.getElementById('semesterTargetTerm');
+                if(year && !year.dataset.touched) year.value=activeAcademicPeriod.tahun_ajaran;
+                if(term && !term.dataset.touched) term.value=activeAcademicPeriod.semester==='Ganjil'?'Genap':'Ganjil';
+            }
+        }
+
+        function renderAcademicPeriodArchive() {
+            const box=document.getElementById('academicPeriodArchive');
+            if(!box) return;
+            if(!stateAcademicPeriods.length) {
+                box.innerHTML='<p class="text-sm text-gray-500">Belum ada arsip periode.</p>';
+                return;
+            }
+            box.innerHTML=stateAcademicPeriods.map(period=>{
+                const label=specialScheduleEsc(period.tahun_ajaran+' • Semester '+period.semester+' • Versi '+period.versi);
+                return '<div class="flex flex-wrap items-center justify-between gap-3 border rounded-lg p-3 '+(period.aktif?'border-green-200 bg-green-50':'border-gray-200')+'"><div class="min-w-0"><p class="text-sm font-semibold text-gray-800">'+label+'</p><p class="text-xs text-gray-500">'+(period.aktif?'Sedang digunakan':'Arsip')+' • '+new Date(period.created_at).toLocaleDateString('id-ID')+'</p></div>'+(period.aktif?'<span class="text-xs font-semibold text-green-700">Aktif</span>':'<button type="button" onclick="activateArchivedSemester(\''+period.id+'\')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold">Aktifkan</button>')+'</div>';
+            }).join('');
+        }
+
+        function downloadSemesterTemplate() {
+            if(!window.XLSX) return alert('Komponen pembaca Excel belum termuat. Periksa koneksi internet.');
+            const wb=XLSX.utils.book_new();
+            const ws=XLSX.utils.aoa_to_sheet([['Hari','JP','Kelas','Kode Mapel','Kode Guru']]);
+            ws['!cols']=[{wch:14},{wch:8},{wch:12},{wch:18},{wch:18}];
+            XLSX.utils.book_append_sheet(wb,ws,'Jadwal');
+            const guide=XLSX.utils.aoa_to_sheet([
+                ['PETUNJUK IMPOR JADWAL SIKUR'],
+                ['Isi satu baris untuk satu kelas pada satu JP.'],
+                ['Nama kolom wajib: Hari, JP, Kelas, Kode Mapel, Kode Guru.'],
+                ['Kode kelas, kode mapel, dan kode guru harus sesuai dengan Data Master SIKUR.'],
+                ['Hari/JP harus tersedia pada pengaturan Jam KBM.'],
+                ['Pastikan tidak ada kelas atau guru yang bentrok pada hari dan JP yang sama.'],
+                ['Semua kelas yang terdaftar di Data Master harus memiliki jadwal.']
+            ]);
+            guide['!cols']=[{wch:105}];
+            XLSX.utils.book_append_sheet(wb,guide,'Petunjuk');
+            XLSX.writeFile(wb,'Template_Impor_Jadwal_SIKUR.xlsx');
+        }
+
+        function normalizeExcelValue(value) {
+            return String(value??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+        }
+
+        function findExcelColumn(header,aliases) {
+            const normalized=header.map(normalizeExcelValue);
+            for(const alias of aliases) {
+                const idx=normalized.indexOf(normalizeExcelValue(alias));
+                if(idx>=0) return idx;
+            }
+            return -1;
+        }
+
+        function resolveMasterKey(value,list) {
+            const raw=String(value??'').trim();
+            if(!raw) return {value:null,error:'kosong'};
+            const key=raw.toUpperCase();
+            const byId=list.filter(x=>normalizeExcelValue(x.id)===normalizeExcelValue(raw));
+            if(byId.length===1) return {value:byId[0].id};
+            if(byId.length>1) return {value:null,error:'ambigu'};
+            const byName=list.filter(x=>normalizeExcelValue(x.nama)===normalizeExcelValue(raw));
+            if(byName.length===1) return {value:byName[0].id};
+            if(byName.length>1) return {value:null,error:'ambigu'};
+            return {value:null,error:'tidak ditemukan'};
+        }
+
+        async function previewSemesterImport() {
+            const input=document.getElementById('semesterExcelFile');
+            const preview=document.getElementById('semesterImportPreview');
+            const button=document.getElementById('btnActivateImportedSemester');
+            pendingSemesterImportRows=null;
+            button.disabled=true;button.textContent='Validasi file terlebih dahulu';
+            const file=input?.files?.[0];
+            if(!file) {preview.textContent='Pilih file Excel atau CSV terlebih dahulu.';return;}
+            if(!window.XLSX) {preview.textContent='Komponen pembaca Excel belum termuat. Periksa koneksi internet.';return;}
+            preview.textContent='Membaca dan memeriksa file...';
+            try {
+                const workbook=XLSX.read(await file.arrayBuffer(),{type:'array'});
+                const sheetName=workbook.SheetNames[0];
+                if(!sheetName) throw new Error('File tidak memiliki lembar kerja.');
+                const matrix=XLSX.utils.sheet_to_json(workbook.Sheets[sheetName],{header:1,defval:'',raw:false,blankrows:false});
+                if(!matrix.length) throw new Error('Lembar kerja kosong.');
+                const aliases={
+                    hari:['hari'],
+                    jp:['jp','jamke','jampembelajaran','jamkeberapa'],
+                    kelas:['kelas','rombel','kodekelas','namakelas'],
+                    mapel:['kodemapel','kodematapelajaran','mapel','matapelajaran','namamapel','kodepelajaran'],
+                    guru:['kodeguru','kodegurupengampu','guru','namaguru','pengajar','gurupengampu']
+                };
+                let headerIndex=-1,cols={};
+                for(let i=0;i<Math.min(matrix.length,15);i++){
+                    const row=(matrix[i]||[]).map(x=>String(x??''));
+                    const found={};
+                    for(const key of Object.keys(aliases)) found[key]=findExcelColumn(row,aliases[key]);
+                    if(Object.values(found).every(x=>x>=0)){headerIndex=i;cols=found;break;}
+                }
+                if(headerIndex<0) throw new Error('Header wajib belum ditemukan. Gunakan template: Hari, JP, Kelas, Kode Mapel, Kode Guru.');
+                const days=new Map([['senin','Senin'],['selasa','Selasa'],['rabu','Rabu'],['kamis','Kamis'],['jumat','Jumat'],['sabtu','Sabtu'],['monday','Senin'],['tuesday','Selasa'],['wednesday','Rabu'],['thursday','Kamis'],['friday','Jumat'],['saturday','Sabtu']]);
+                const rows=[],errors=[],classKeys=new Set(),teacherSlots=new Set(),classSlots=new Set();
+                for(let i=headerIndex+1;i<matrix.length;i++){
+                    const row=matrix[i]||[];
+                    if(!row.some(v=>String(v??'').trim()!=='')) continue;
+                    const excelRow=i+1;
+                    const dayRaw=String(row[cols.hari]??'').trim();
+                    const day=days.get(dayRaw.toLowerCase());
+                    const jpRaw=String(row[cols.jp]??'').trim();
+                    const jpMatch=jpRaw.match(/\d+/);
+                    const jp=jpMatch?Number(jpMatch[0]):NaN;
+                    const kelas=resolveMasterKey(row[cols.kelas],dbKelas);
+                    const mapel=resolveMasterKey(row[cols.mapel],dbMapel);
+                    const guru=resolveMasterKey(row[cols.guru],dbGuru);
+                    const issues=[];
+                    if(!day) issues.push('hari tidak dikenali');
+                    if(!Number.isInteger(jp)||jp<1) issues.push('JP tidak valid');
+                    else if(day && !dbJamKbm.some(x=>x.hari===day && Number(x.jam_ke)===jp)) issues.push(day+' JP-'+jp+' tidak tersedia');
+                    if(kelas.error) issues.push('kelas '+kelas.error);
+                    if(mapel.error) issues.push('mapel '+mapel.error);
+                    if(guru.error) issues.push('guru '+guru.error);
+                    if(!issues.length){
+                        const ck=day+'|'+jp+'|'+kelas.value;
+                        const tk=day+'|'+jp+'|'+guru.value;
+                        if(classSlots.has(ck)) issues.push('kelas memiliki dua jadwal pada JP yang sama');
+                        if(teacherSlots.has(tk)) issues.push('guru mengajar di lebih dari satu kelas pada JP yang sama');
+                        classSlots.add(ck);teacherSlots.add(tk);classKeys.add(kelas.value);
+                        rows.push({hari:day,jam_ke:jp,kelas:kelas.value,kode_mapel:mapel.value,kode_guru:guru.value});
+                    }
+                    if(issues.length) errors.push('Baris '+excelRow+': '+issues.join('; '));
+                }
+                const missing=(dbKelas||[]).filter(k=>!classKeys.has(k.id)).map(k=>k.nama||k.id);
+                missing.forEach(name=>errors.push('Jadwal belum memuat kelas '+name));
+                if(!rows.length) errors.push('Tidak ada baris jadwal yang valid.');
+                const warnings=[];
+                if(rows.length!==1269) warnings.push('Jumlah '+rows.length+' slot, sementara jadwal sebelumnya berjumlah '+dbJadwal.length+'. Pastikan pengurangan atau penambahannya memang direncanakan.');
+                const valid=errors.length===0;
+                pendingSemesterImportRows=valid?rows:null;
+                preview.innerHTML='<div class="rounded-lg '+(valid?'bg-green-50 border-green-200 text-green-800':'bg-red-50 border-red-200 text-red-800')+' border p-3"><p class="font-semibold">'+(valid?'Validasi berhasil':'Ditemukan masalah pada file')+'</p><p class="mt-1">Jadwal valid: '+rows.length+' • Kelas tercakup: '+classKeys.size+'/'+dbKelas.length+'</p>'+(warnings.length?'<p class="mt-2 text-amber-800">'+warnings.map(specialScheduleEsc).join('<br>')+'</p>':'')+(errors.length?'<ul class="mt-2 list-disc list-inside space-y-1">'+errors.slice(0,30).map(x=>'<li>'+specialScheduleEsc(x)+'</li>').join('')+'</ul>'+(errors.length>30?'<p class="mt-1">Dan '+(errors.length-30)+' masalah lainnya.</p>':''):'')+'</div>';
+                button.disabled=!valid;
+                button.textContent=valid?'Aktifkan Jadwal Semester Baru':'Perbaiki File Excel';
+            } catch(e) {
+                preview.innerHTML='<p class="text-sm text-red-600">'+specialScheduleEsc(e.message||String(e))+'</p>';
+            }
+        }
+
+        async function activateImportedSemester() {
+            if(!canManageCurriculumContent() || !supabaseReady || !pendingSemesterImportRows) return;
+            const year=document.getElementById('semesterTargetYear').value.trim();
+            const term=document.getElementById('semesterTargetTerm').value;
+            if(!/^\d{4}\/\d{4}$/.test(year)) return alert('Tahun ajaran harus berformat YYYY/YYYY.');
+            const count=pendingSemesterImportRows.length;
+            if(!confirm('Aktifkan jadwal '+year+' Semester '+term+' dengan '+count+' slot? Periode aktif sebelumnya akan disimpan sebagai arsip dan tidak dihapus.')) return;
+            const button=document.getElementById('btnActivateImportedSemester');
+            button.disabled=true;button.textContent='Mengaktifkan...';
+            try {
+                const {data,error}=await sb.rpc('sikur_import_semester_schedule',{
+                    p_tahun_ajaran:year,p_semester:term,p_rows:pendingSemesterImportRows
+                });
+                if(error) throw error;
+                pendingSemesterImportRows=null;
+                document.getElementById('semesterExcelFile').value='';
+                document.getElementById('semesterImportPreview').textContent='Jadwal semester baru berhasil diaktifkan.';
+                await syncFromSupabase(false);
+                await loadAcademicPeriods(false);
+                button.textContent='Aktifkan Jadwal Semester Baru';
+                alert('Jadwal berhasil diaktifkan. '+(data?.jumlah_jadwal||count)+' slot dari '+(data?.jumlah_kelas||'')+' kelas telah dimuat. Jadwal lama tersimpan sebagai arsip.');
+            } catch(e) {
+                button.disabled=false;button.textContent='Aktifkan Jadwal Semester Baru';
+                alert('Gagal mengaktifkan semester: '+(e.message||String(e)));
+            }
+        }
+
+        async function activateArchivedSemester(id) {
+            if(!canManageCurriculumContent() || !confirm('Aktifkan kembali jadwal dari arsip ini? Jadwal yang sekarang aktif akan diarsipkan.')) return;
+            try {
+                const {data,error}=await sb.rpc('sikur_aktifkan_periode_semester',{p_periode_id:id});
+                if(error) throw error;
+                await syncFromSupabase(false);
+                await loadAcademicPeriods(false);
+                alert('Periode arsip berhasil diaktifkan kembali.');
+            } catch(e) {
+                alert('Gagal mengaktifkan arsip: '+(e.message||String(e)));
+            }
         }
 
         function addV24Controls(){
@@ -3128,10 +3540,11 @@
                 box.innerHTML='<button onclick="validateSIKURData()" class="px-3 py-2 text-sm border rounded-lg">Periksa Integritas Data</button><button onclick="persistMasterSnapshotToSupabase()" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg">Sinkron Master</button><button onclick="replaceScheduleInSupabase()" class="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg">Sinkron Jadwal</button><button onclick="downloadFullBackup()" class="px-3 py-2 text-sm border rounded-lg">Backup Lengkap</button>';
                 master.insertBefore(box,master.children[1]||null);
             }
+            addAcademicPeriodControls();
         }
 
         const _applyRoleV24=applyRoleUI;
-        applyRoleUI=function(){_applyRoleV24();addV24Controls();const c=document.getElementById('v24Controls');if(c)c.style.display=roleCanManageMaster()?'flex':'none';};
+        applyRoleUI=function(){_applyRoleV24();addV24Controls();const c=document.getElementById('v24Controls');if(c)c.style.display=roleCanManageMaster()?'flex':'none';const m=document.getElementById('academicPeriodManager');if(m)m.style.display=roleCanManageMaster()?'block':'none';};
 
         // After existing local CRUD succeeds, mirror master state to Supabase.
         const _saveMasterV24=saveMasterItem;
@@ -3142,12 +3555,405 @@
 
         window.addEventListener('load',()=>setTimeout(()=>{addV24Controls(); if(currentProfile)applyRoleUI();},800));
 
-    </script>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/SIKUR-SMANSAKA/app/sw.js', { scope: '/SIKUR-SMANSAKA/app/' })
-    .catch(console.error);
-}
+    
+        // ==========================================
+        // 20. JADWAL KHUSUS SEKOLAH
+        // Berbagi ke seluruh pengguna melalui Supabase
+        // ==========================================
+        let stateJadwalKhusus = [];
+
+        function specialScheduleEsc(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+            }[ch]));
+        }
+
+        function specialScheduleFind(date) {
+            return stateJadwalKhusus.find(item => item.tanggal === date) || null;
+        }
+
+        function specialScheduleDefaultSlots(date) {
+            const hari = getHariFromDate(date);
+            return dbJamKbm.filter(slot => slot.hari === hari)
+                .sort((a,b) => Number(a.jam_ke)-Number(b.jam_ke))
+                .map(slot => ({
+                    jam_ke:Number(slot.jam_ke), aktif:true,
+                    mulai:String(slot.mulai).slice(0,5),
+                    selesai:String(slot.selesai).slice(0,5)
+                }));
+        }
+
+        function renderSpecialScheduleTimes(slots) {
+            const box=document.getElementById('specialScheduleTimes');
+            if(!box) return;
+            if(!slots.length) {
+                box.innerHTML='<p class="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">Tidak ada JP reguler pada tanggal tersebut.</p>';
+                return;
+            }
+            box.innerHTML=slots.map(slot=>`
+                <div class="grid grid-cols-1 sm:grid-cols-[90px_1fr_1fr_1fr] gap-2 items-center border border-gray-100 rounded-lg p-3">
+                    <div class="font-semibold text-sm text-gray-800">JP-${slot.jam_ke}</div>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input id="spAktif${slot.jam_ke}" type="checkbox" ${slot.aktif!==false?'checked':''} class="w-4 h-4">
+                        <span>Aktif</span>
+                    </label>
+                    <div><label for="spMulai${slot.jam_ke}" class="block text-xs text-gray-500 mb-1">Mulai</label><input id="spMulai${slot.jam_ke}" type="time" value="${specialScheduleEsc(slot.mulai)}" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm"></div>
+                    <div><label for="spSelesai${slot.jam_ke}" class="block text-xs text-gray-500 mb-1">Selesai</label><input id="spSelesai${slot.jam_ke}" type="time" value="${specialScheduleEsc(slot.selesai)}" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm"></div>
+                </div>`).join('');
+        }
+
+        function resetSpecialScheduleForm() {
+            const editor=document.getElementById('specialScheduleEditor');
+            if(!editor) return;
+            editor.classList.add('hidden');
+            editor.dataset.open='false';
+            document.getElementById('specialScheduleDate').value='';
+            document.getElementById('specialScheduleName').value='';
+            document.getElementById('specialScheduleNotes').value='';
+            document.getElementById('specialScheduleTimes').innerHTML='';
+            document.getElementById('specialScheduleFormTitle').textContent='Pengaturan Jadwal Khusus';
+            document.getElementById('specialScheduleMessage').textContent='';
+        }
+
+        function openNewSpecialSchedule() {
+            if(!canManageCurriculumContent()) return alert('Hanya Admin/Waka Kurikulum yang dapat mengatur jadwal khusus.');
+            const today=monitoringTodayWIB();
+            if(specialScheduleFind(today)) return editSpecialSchedule(today);
+            const editor=document.getElementById('specialScheduleEditor');
+            const dateField=document.getElementById('specialScheduleDate');
+            editor.dataset.open='true';
+            editor.classList.remove('hidden');
+            dateField.value=today;
+            document.getElementById('specialScheduleName').value='';
+            document.getElementById('specialScheduleNotes').value='';
+            document.getElementById('specialScheduleFormTitle').textContent='Buat Jadwal Khusus';
+            document.getElementById('specialScheduleMessage').textContent='';
+            renderSpecialScheduleTimes(specialScheduleDefaultSlots(today));
+            editor.scrollIntoView({behavior:'smooth',block:'start'});
+        }
+
+        function specialScheduleDateChanged() {
+            const date=document.getElementById('specialScheduleDate').value;
+            const existing=specialScheduleFind(date);
+            if(existing) {
+                document.getElementById('specialScheduleName').value=existing.nama_kegiatan||'';
+                document.getElementById('specialScheduleNotes').value=existing.keterangan||'';
+                document.getElementById('specialScheduleFormTitle').textContent='Ubah Jadwal Khusus';
+                renderSpecialScheduleTimes(existing.waktu||specialScheduleDefaultSlots(date));
+            } else {
+                document.getElementById('specialScheduleName').value='';
+                document.getElementById('specialScheduleNotes').value='';
+                document.getElementById('specialScheduleFormTitle').textContent='Buat Jadwal Khusus';
+                renderSpecialScheduleTimes(specialScheduleDefaultSlots(date));
+            }
+        }
+
+        function editSpecialSchedule(date) {
+            if(!canManageCurriculumContent()) return;
+            const item=specialScheduleFind(date); if(!item) return;
+            document.getElementById('specialScheduleEditor').dataset.open='true';
+            document.getElementById('specialScheduleEditor').classList.remove('hidden');
+            document.getElementById('specialScheduleDate').value=item.tanggal;
+            document.getElementById('specialScheduleName').value=item.nama_kegiatan||'';
+            document.getElementById('specialScheduleNotes').value=item.keterangan||'';
+            document.getElementById('specialScheduleFormTitle').textContent='Ubah Jadwal Khusus';
+            document.getElementById('specialScheduleMessage').textContent='';
+            renderSpecialScheduleTimes(item.waktu||specialScheduleDefaultSlots(date));
+            document.getElementById('specialScheduleEditor').scrollIntoView({behavior:'smooth',block:'start'});
+        }
+
+        async function loadSpecialSchedules(silent=false) {
+            if(!sb || !currentUser) return;
+            const {data,error}=await sb.from('sikur_jadwal_khusus')
+                .select('tanggal,nama_kegiatan,keterangan,waktu,created_by,created_at,updated_at')
+                .order('tanggal',{ascending:false}).limit(120);
+            if(error) {
+                console.warn('Gagal memuat jadwal khusus:',error);
+                const box=document.getElementById('specialScheduleList');
+                if(box) box.innerHTML='<p class="text-sm text-red-600">Jadwal khusus belum dapat dimuat: '+specialScheduleEsc(error.message)+'</p>';
+                return;
+            }
+            stateJadwalKhusus=(data||[]).map(item=>({
+                ...item,
+                waktu:Array.isArray(item.waktu)?item.waktu:[]
+            }));
+            localStorage.setItem('sikur_jadwal_khusus_cache',JSON.stringify(stateJadwalKhusus));
+            renderSpecialSchedules();
+            updateDashboardStats();
+            if(!document.getElementById('sec-jadwal-saya')?.classList.contains('hidden')) renderJadwalSayaHariIni();
+            if(!silent) setSupabaseStatus(true,'Jadwal khusus tersinkron');
+        }
+
+        function renderSpecialScheduleDashboardBanner(date=monitoringTodayWIB()) {
+            const stats=document.getElementById('dashboardStats');
+            if(!stats) return;
+            let box=document.getElementById('specialScheduleTodayBanner');
+            const item=specialScheduleFind(date);
+            if(!item) {
+                if(box) box.remove();
+                return;
+            }
+            if(!box) {
+                box=document.createElement('div');
+                box.id='specialScheduleTodayBanner';
+                box.className='rounded-xl border border-amber-200 bg-amber-50 text-amber-900 p-4';
+                stats.insertAdjacentElement('afterend',box);
+            }
+            const active=(item.waktu||[]).filter(slot=>slot.aktif!==false).length;
+            box.innerHTML='<div class="flex items-start gap-3"><i class="ph ph-calendar-star text-xl mt-0.5"></i><div><p class="font-semibold">Jadwal Khusus Hari Ini: '+specialScheduleEsc(item.nama_kegiatan)+'</p><p class="text-sm mt-1">'+specialScheduleEsc(item.keterangan||'Pengaturan waktu KBM berlaku untuk seluruh kelas.')+'</p><p class="text-xs mt-1">JP aktif: '+active+' • Jadwal reguler tidak berubah.</p></div></div>';
+        }
+
+        function renderSpecialSchedules() {
+            const list=document.getElementById('specialScheduleList');
+            if(!list) return;
+            const editor=document.getElementById('specialScheduleEditor');
+            const button=document.getElementById('btnNewSpecialSchedule');
+            const canEdit=canManageCurriculumContent();
+            if(editor) editor.classList.toggle('hidden',!canEdit || editor.dataset.open!=='true');
+            if(button) button.classList.toggle('hidden',!canEdit);
+            const rows=[...stateJadwalKhusus].sort((a,b)=>b.tanggal.localeCompare(a.tanggal));
+            if(!rows.length) {
+                list.innerHTML='<p class="text-sm text-gray-500">Belum ada jadwal khusus yang disimpan.</p>';
+            } else {
+                list.innerHTML=rows.map(item=>{
+                    const active=(item.waktu||[]).filter(slot=>slot.aktif!==false).length;
+                    const times=(item.waktu||[]).filter(slot=>slot.aktif!==false).map(slot=>'JP-'+slot.jam_ke+' '+specialScheduleEsc(slot.mulai)+'–'+specialScheduleEsc(slot.selesai)).join(' • ');
+                    const actions=canEdit
+                        ? '<div class="flex gap-3 text-sm mt-3"><button onclick="editSpecialSchedule(\''+specialScheduleEsc(item.tanggal)+'\')" class="text-blue-700 font-semibold">Ubah</button><button onclick="deleteSpecialSchedule(\''+specialScheduleEsc(item.tanggal)+'\')" class="text-red-600 font-semibold">Hapus</button></div>'
+                        : '';
+                    return '<article class="border border-gray-200 rounded-xl p-4"><div class="flex flex-wrap justify-between gap-2"><div><h4 class="font-semibold text-gray-800">'+specialScheduleEsc(item.nama_kegiatan)+'</h4><p class="text-xs text-gray-500 mt-1">'+formatDateID(item.tanggal)+'</p></div><span class="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 h-fit">'+active+' JP aktif</span></div><p class="text-sm text-gray-600 mt-3">'+specialScheduleEsc(item.keterangan||'Tidak ada keterangan tambahan.')+'</p><p class="text-xs text-gray-500 mt-2 leading-relaxed">'+(times||'Tidak ada JP aktif')+'</p>'+actions+'</article>';
+                }).join('');
+            }
+            renderSpecialScheduleDashboardBanner();
+        }
+
+        async function saveSpecialSchedule() {
+            if(!canManageCurriculumContent()) return alert('Hanya Admin/Waka Kurikulum yang dapat mengatur jadwal khusus.');
+            if(!sb || !supabaseReady || !currentUser) return alert('Koneksi Supabase dan akun login diperlukan untuk menyimpan jadwal khusus.');
+            const date=document.getElementById('specialScheduleDate').value;
+            const name=document.getElementById('specialScheduleName').value.trim();
+            const notes=document.getElementById('specialScheduleNotes').value.trim();
+            if(!date || !name) return alert('Tanggal dan nama kegiatan wajib diisi.');
+            const slots=specialScheduleDefaultSlots(date);
+            if(!slots.length) return alert('Tanggal tersebut tidak memiliki slot JP reguler.');
+            const waktu=slots.map(slot=>{
+                const jp=slot.jam_ke;
+                return {
+                    jam_ke:jp,
+                    aktif:document.getElementById('spAktif'+jp)?.checked===true,
+                    mulai:document.getElementById('spMulai'+jp)?.value||'',
+                    selesai:document.getElementById('spSelesai'+jp)?.value||''
+                };
+            });
+            const active=waktu.filter(slot=>slot.aktif);
+            if(!active.length) return alert('Minimal satu JP harus tetap aktif.');
+            for(const slot of active) {
+                if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(slot.mulai) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(slot.selesai))
+                    return alert('Lengkapi waktu mulai dan selesai untuk JP-'+slot.jam_ke+'.');
+                if(slot.mulai>=slot.selesai) return alert('Waktu selesai harus lebih akhir daripada waktu mulai pada JP-'+slot.jam_ke+'.');
+            }
+            const existing=specialScheduleFind(date);
+            const button=document.querySelector('#specialScheduleEditor button[onclick="saveSpecialSchedule()"]');
+            if(button){button.disabled=true;button.textContent='Menyimpan...';}
+            const message=document.getElementById('specialScheduleMessage');
+            message.className='text-sm self-center text-gray-500';message.textContent='Menyimpan ke Supabase...';
+            try {
+                const payload={
+                    tanggal:date,nama_kegiatan:name,keterangan:notes||null,waktu,
+                    created_by:existing?.created_by||currentUser.id,
+                    updated_at:new Date().toISOString()
+                };
+                const {error}=await sb.from('sikur_jadwal_khusus').upsert(payload,{onConflict:'tanggal'});
+                if(error) throw error;
+                await loadSpecialSchedules(true);
+                message.className='text-sm self-center text-green-700';message.textContent='Jadwal khusus berhasil disimpan dan dibagikan.';
+                document.getElementById('specialScheduleFormTitle').textContent='Pengaturan Jadwal Khusus';
+            } catch(e) {
+                message.className='text-sm self-center text-red-600';message.textContent='Gagal menyimpan: '+(e.message||String(e));
+            } finally {
+                if(button){button.disabled=false;button.textContent='Simpan Jadwal Khusus';}
+            }
+        }
+
+        async function deleteSpecialSchedule(date) {
+            if(!canManageCurriculumContent() || !confirm('Hapus jadwal khusus tanggal '+formatDateID(date)+'? Jadwal reguler akan kembali digunakan pada tanggal tersebut.')) return;
+            const {error}=await sb.from('sikur_jadwal_khusus').delete().eq('tanggal',date);
+            if(error) return alert('Gagal menghapus jadwal khusus: '+error.message);
+            await loadSpecialSchedules(true);
+            resetSpecialScheduleForm();
+        }
+
+        // ==========================================
+        // PESAN UNTUK KELAS
+        // ==========================================
+        let statePesanKelas = [];
+
+        function classMessageEsc(value) {
+            return String(value ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        }
+
+        function renderClassMessageTargets(selected=[]) {
+            const box=document.getElementById('classMessageTargets');
+            if(!box) return;
+            const chosen=new Set(selected);
+            box.innerHTML=(dbKelas||[]).map(k=>{
+                const id=String(k.id);
+                return '<label class="flex items-center gap-2 text-sm text-gray-700 rounded-lg px-2 py-1.5 hover:bg-gray-50"><input type="checkbox" class="class-message-target w-4 h-4" value="'+classMessageEsc(id)+'" '+(chosen.has(id)?'checked':'')+' onchange="updateClassMessageAllState()"> '+classMessageEsc(k.nama||id)+'</label>';
+            }).join('') || '<p class="text-sm text-gray-500">Data kelas belum tersedia. Sinkronkan data SIKUR terlebih dahulu.</p>';
+            const all=document.getElementById('classMessageAll');
+            if(all) all.checked=(dbKelas||[]).length>0 && selected.length===(dbKelas||[]).length;
+        }
+
+        function toggleClassMessageAll() {
+            const all=document.getElementById('classMessageAll')?.checked===true;
+            document.querySelectorAll('.class-message-target').forEach(el=>el.checked=all);
+        }
+
+        function updateClassMessageAllState() {
+            const boxes=[...document.querySelectorAll('.class-message-target')];
+            const all=document.getElementById('classMessageAll');
+            if(all) all.checked=boxes.length>0 && boxes.every(el=>el.checked);
+        }
+
+        async function loadClassMessages() {
+            const box=document.getElementById('classMessageList');
+            if(!sb || !currentUser || !box) return;
+            box.innerHTML='<p class="text-sm text-gray-400">Memuat pesan...</p>';
+            const {data,error}=await sb.from('sikur_pesan_kelas').select('*').order('created_at',{ascending:false}).limit(200);
+            if(error) {
+                box.innerHTML='<p class="text-sm text-red-600">Pesan belum dapat dimuat: '+classMessageEsc(error.message)+'</p>';
+                return;
+            }
+            statePesanKelas=data||[];
+            renderClassMessages();
+        }
+
+        function renderClassMessages() {
+            const box=document.getElementById('classMessageList');
+            if(!box) return;
+            if(!statePesanKelas.length) {
+                box.innerHTML='<p class="text-sm text-gray-500">Belum ada pesan untuk kelas.</p>';
+                return;
+            }
+            box.innerHTML=statePesanKelas.map(item=>{
+                const targets=(item.kelas||[]).length===(dbKelas||[]).length?'Seluruh kelas':(item.kelas||[]).join(', ');
+                const dates=classMessageEsc(item.mulai_tampil)+(item.berlaku_sampai?' s.d. '+classMessageEsc(item.berlaku_sampai):' • tanpa batas akhir');
+                const priority=item.prioritas==='penting'?'Penting':'Biasa';
+                const status=item.aktif?'Aktif':'Disembunyikan';
+                return '<article class="border rounded-xl p-4 '+(item.aktif?'border-gray-200':'border-gray-100 bg-gray-50 opacity-75')+'"><div class="flex flex-wrap items-start justify-between gap-3"><div class="min-w-0 flex-1"><div class="flex flex-wrap gap-2 mb-2"><span class="text-xs px-2 py-1 rounded-full '+(item.prioritas==='penting'?'bg-amber-100 text-amber-800':'bg-blue-50 text-blue-700')+'">'+priority+'</span><span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">'+status+'</span></div><h4 class="font-semibold text-gray-800">'+classMessageEsc(item.judul)+'</h4><p class="text-xs text-gray-500 mt-1">Tujuan: '+classMessageEsc(targets)+' • '+dates+'</p><p class="text-sm text-gray-700 mt-3 whitespace-pre-wrap break-words">'+classMessageEsc(item.isi)+'</p></div><div class="flex gap-3 text-sm shrink-0"><button onclick="editClassMessage(\''+item.id+'\')" class="text-blue-700 font-semibold">Ubah</button><button onclick="deleteClassMessage(\''+item.id+'\')" class="text-red-600 font-semibold">Hapus</button></div></div></article>';
+            }).join('');
+        }
+
+        function openClassMessageForm(id=null) {
+            if(!canManageCurriculumContent()) return alert('Hanya Admin/Waka Kurikulum yang dapat mengirim pesan kelas.');
+            resetClassMessageForm();
+            const editor=document.getElementById('classMessageEditor');
+            editor.classList.remove('hidden');
+            if(id) {
+                const item=statePesanKelas.find(x=>x.id===id);
+                if(!item) return;
+                editor.dataset.editId=id;
+                document.getElementById('classMessageFormTitle').textContent='Ubah Pesan';
+                document.getElementById('classMessageTitle').value=item.judul||'';
+                document.getElementById('classMessageBody').value=item.isi||'';
+                document.getElementById('classMessagePriority').value=item.prioritas||'biasa';
+                document.getElementById('classMessageStart').value=item.mulai_tampil||monitoringTodayWIB();
+                document.getElementById('classMessageEnd').value=item.berlaku_sampai||'';
+                document.getElementById('classMessageActive').checked=item.aktif!==false;
+                renderClassMessageTargets(item.kelas||[]);
+            } else {
+                renderClassMessageTargets([]);
+                document.getElementById('classMessageStart').value=monitoringTodayWIB();
+            }
+            editor.scrollIntoView({behavior:'smooth',block:'start'});
+        }
+
+        function editClassMessage(id) { openClassMessageForm(id); }
+
+        function resetClassMessageForm() {
+            const editor=document.getElementById('classMessageEditor');
+            if(!editor) return;
+            editor.classList.add('hidden');
+            delete editor.dataset.editId;
+            document.getElementById('classMessageTitle').value='';
+            document.getElementById('classMessageBody').value='';
+            document.getElementById('classMessagePriority').value='biasa';
+            document.getElementById('classMessageStart').value='';
+            document.getElementById('classMessageEnd').value='';
+            document.getElementById('classMessageActive').checked=true;
+            document.getElementById('classMessageFeedback').textContent='';
+            document.getElementById('classMessageFormTitle').textContent='Tulis Pesan Baru';
+            renderClassMessageTargets([]);
+        }
+
+        async function saveClassMessage() {
+            if(!canManageCurriculumContent()) return alert('Hanya Admin/Waka Kurikulum yang dapat mengirim pesan kelas.');
+            if(!sb || !supabaseReady || !currentUser) return alert('Koneksi Supabase dan akun login diperlukan.');
+            const judul=document.getElementById('classMessageTitle').value.trim();
+            const isi=document.getElementById('classMessageBody').value.trim();
+            const kelas=[...document.querySelectorAll('.class-message-target:checked')].map(el=>el.value);
+            const mulai=document.getElementById('classMessageStart').value;
+            const akhir=document.getElementById('classMessageEnd').value||null;
+            const feedback=document.getElementById('classMessageFeedback');
+            if(!judul || !isi) return alert('Judul dan isi pesan wajib diisi.');
+            if(!kelas.length) return alert('Pilih minimal satu kelas atau centang Seluruh kelas.');
+            if(!mulai) return alert('Tanggal mulai ditampilkan wajib diisi.');
+            if(akhir && akhir<mulai) return alert('Tanggal akhir tidak boleh lebih awal daripada tanggal mulai.');
+            const editor=document.getElementById('classMessageEditor'),editId=editor.dataset.editId;
+            const payload={judul,isi,kelas,prioritas:document.getElementById('classMessagePriority').value,aktif:document.getElementById('classMessageActive').checked,mulai_tampil:mulai,berlaku_sampai:akhir,updated_at:new Date().toISOString()};
+            feedback.className='text-sm text-gray-500';feedback.textContent='Menyimpan pesan...';
+            try {
+                const result=editId
+                    ? await sb.from('sikur_pesan_kelas').update(payload).eq('id',editId)
+                    : await sb.from('sikur_pesan_kelas').insert({...payload,created_by:currentUser.id});
+                if(result.error) throw result.error;
+                await loadClassMessages();
+                resetClassMessageForm();
+                feedback.className='text-sm text-green-700';feedback.textContent='Pesan berhasil disimpan.';
+            } catch(e) {
+                feedback.className='text-sm text-red-600';feedback.textContent='Gagal menyimpan: '+(e.message||String(e));
+            }
+        }
+
+        async function deleteClassMessage(id) {
+            if(!canManageCurriculumContent() || !confirm('Hapus pesan ini? Pesan akan langsung hilang dari PantauKBM kelas tujuan.')) return;
+            const {error}=await sb.from('sikur_pesan_kelas').delete().eq('id',id);
+            if(error) return alert('Gagal menghapus pesan: '+error.message);
+            await loadClassMessages();
+            resetClassMessageForm();
+        }
+
+        function getScheduleRowForDate(jadwalId,date) {
+            const base=vSikurJadwalLengkap.find(row=>String(row.id)===String(jadwalId));
+            if(!base) return null;
+            return applySpecialScheduleToRows([base],date)[0] || null;
+        }
+
+        function applySpecialScheduleToRows(rows,date) {
+            const item=specialScheduleFind(date);
+            if(!item) return rows;
+            const byJp=new Map((item.waktu||[]).map(slot=>[Number(slot.jam_ke),slot]));
+            return rows.filter(row=>{
+                const slot=byJp.get(Number(row.jam_ke));
+                return !slot || slot.aktif!==false;
+            }).map(row=>{
+                const slot=byJp.get(Number(row.jam_ke));
+                if(!slot) return row;
+                return {
+                    ...row,
+                    waktu_mulai:slot.mulai||row.waktu_mulai,
+                    waktu_selesai:slot.selesai||row.waktu_selesai
+                };
+            });
+        }
+
+        // Supabase menjadi sumber utama; jadwal khusus disimpan lintas perangkat.
+        const _enterAuthenticatedWithSpecialSchedule=enterAuthenticatedApp;
+        enterAuthenticatedApp=async function() {
+            await _enterAuthenticatedWithSpecialSchedule();
+            await loadSpecialSchedules(true);
+        };
+
 </script>
 </body>
 </html>
