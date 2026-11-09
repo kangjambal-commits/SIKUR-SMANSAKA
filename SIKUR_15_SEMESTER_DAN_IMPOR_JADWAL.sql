@@ -100,7 +100,7 @@ declare
   v_version integer;
   v_period_id uuid;
 begin
-  if v_user is null or public.sikur_my_role() not in ('admin','waka') then
+  if v_user is null or coalesce(public.sikur_my_role(),'') not in ('admin','waka') then
     raise exception 'Hanya Admin/Waka Kurikulum yang dapat mengganti jadwal semester';
   end if;
 
@@ -118,7 +118,6 @@ begin
 
   perform pg_advisory_xact_lock(hashtext('sikur_semester_switch'));
 
-  drop table if exists pg_temp.sikur_import_rows;
   create temporary table sikur_import_rows on commit drop as
   select
     nullif(btrim(x.hari),'') as hari,
@@ -197,7 +196,7 @@ begin
   update public.sikur_periode_semester set aktif=false where aktif=true;
   update public.sikur_periode_semester set aktif=true where id=v_period_id;
 
-  insert into public.sikur_jadwal(period_id,hari,jam_ke,kelas,kode_mapel,kode_guru)
+  insert into public.sikur_jadwal(periode_id,hari,jam_ke,kelas,kode_mapel,kode_guru)
   select v_period_id,hari,jam_ke,kelas,kode_mapel,kode_guru
   from pg_temp.sikur_import_rows
   order by case hari
@@ -370,3 +369,14 @@ $function$;
 
 revoke all on function public.sikur_jadwal_ketua_hari_ini(text) from public;
 grant execute on function public.sikur_jadwal_ketua_hari_ini(text) to anon, authenticated;
+
+-- Sinkronkan perubahan periode aktif ke aplikasi utama dan PantauKBM.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname='supabase_realtime') then
+    if not exists (select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='sikur_periode_semester') then
+      execute 'alter publication supabase_realtime add table public.sikur_periode_semester';
+    end if;
+  end if;
+end
+$$;
