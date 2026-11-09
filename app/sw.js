@@ -1,5 +1,19 @@
-const CACHE='sikur-app-v1';
-const HOME='/SIKUR-SMANSAKA/app/';
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.add(HOME)));self.skipWaiting();});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).catch(()=>caches.match(HOME)));}});
+const CACHE='sikur-app-v2';
+const HOME=new URL('./',self.registration.scope).href;
+self.addEventListener('install',event=>{
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.add(HOME)));
+  self.skipWaiting();
+});
+self.addEventListener('activate',event=>{
+  event.waitUntil((async()=>{
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(key=>key.startsWith('sikur-app-')&&key!==CACHE).map(key=>caches.delete(key)));
+    await self.clients.claim();
+  })());
+});
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET') return;
+  if(event.request.mode==='navigate'){
+    event.respondWith(fetch(event.request).catch(()=>caches.match(event.request).then(response=>response||caches.match(HOME))));
+  }
+});
