@@ -65,14 +65,15 @@ async function loadTest(){
  const box=document.getElementById('list'),btn=document.getElementById('btnTest');
  btn.disabled=true;btn.textContent='Memuat...';
  try{
-  const res=await fetch(SB_URL+'/rest/v1/v_sikur_jadwal_lengkap?select=id,hari,jam_ke,kelas,kode_mapel,nama_mapel,kode_guru,nama_guru&kelas=eq.XI-A&hari=eq.Senin&order=jam_ke.asc',{
-   headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
-  });
-  if(!res.ok) throw new Error('Jadwal uji tidak dapat dimuat (HTTP '+res.status+').');
-  const data=await res.json();
-  if(!data?.length) throw new Error('Jadwal Senin XI-A tidak ditemukan.');
-  box.innerHTML='<div class="card testbar"><span class="testtag">DATA UJI • SENIN</span><div class="muted" style="margin-top:7px">Pilihan status di bawah hanya untuk simulasi tampilan dan tidak disimpan.</div></div>'+
-   data.map(r=>'<div class="card"><div><span class="jp">JAM PEMBELAJARAN KE-'+esc(r.jam_ke)+'</span><h2 style="margin-top:8px">'+esc(r.nama_mapel||r.kode_mapel)+'</h2><div class="muted">'+esc(r.nama_guru||r.kode_guru)+'</div></div><div class="statusgrid">'+statuses.map(s=>'<button type="button" onclick="testChoose(this)">'+esc(s)+'</button>').join('')+'</div><div class="muted" style="margin-top:10px">Simulasi saja • tidak masuk database</div></div>').join('');
+  // Data demonstrasi lokal; tidak membaca jadwal atau nama guru produksi.
+  const data=[
+   {jam_ke:1,nama_mapel:'Mata Pelajaran Contoh 1',nama_guru:'Guru Contoh 1'},
+   {jam_ke:2,nama_mapel:'Mata Pelajaran Contoh 2',nama_guru:'Guru Contoh 2'},
+   {jam_ke:3,nama_mapel:'Mata Pelajaran Contoh 3',nama_guru:'Guru Contoh 3'},
+   {jam_ke:4,nama_mapel:'Mata Pelajaran Contoh 4',nama_guru:'Guru Contoh 4'}
+  ];
+  box.innerHTML='<div class="card testbar"><span class="testtag">DATA UJI • SENIN</span><div class="muted" style="margin-top:7px">Data contoh untuk simulasi tampilan. Pilihan status tidak disimpan ke database.</div></div>'+
+   data.map(r=>'<div class="card"><div><span class="jp">JAM PEMBELAJARAN KE-'+esc(r.jam_ke)+'</span><h2 style="margin-top:8px">'+esc(r.nama_mapel)+'</h2><div class="muted">'+esc(r.nama_guru)+'</div></div><div class="statusgrid">'+statuses.map(s=>'<button type="button" onclick="testChoose(this)">'+esc(s)+'</button>').join('')+'</div><div class="muted" style="margin-top:10px">Simulasi saja • tidak masuk database</div></div>').join('');
  }catch(e){box.innerHTML='<div class="card err">'+esc(e.message||String(e))+'</div>'}
  finally{btn.disabled=false;btn.textContent='Uji Jadwal Senin';}
 }
