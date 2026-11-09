@@ -58,14 +58,7 @@ create index if not exists idx_sikur_jadwal_periode_id
 create unique index if not exists uq_sikur_jadwal_periode_slot_kelas
   on public.sikur_jadwal(periode_id,hari,jam_ke,kelas);
 
-create sequence if not exists public.sikur_jadwal_id_seq;
-select setval(
-  'public.sikur_jadwal_id_seq',
-  greatest(coalesce((select max(id) from public.sikur_jadwal),0),1),
-  coalesce((select max(id) from public.sikur_jadwal),0)>0
-);
-alter table public.sikur_jadwal
-  alter column id set default nextval('public.sikur_jadwal_id_seq');
+-- Kolom id sikur_jadwal sudah berupa identity; PostgreSQL mengisinya otomatis.
 
 create unique index if not exists uq_sikur_one_active_semester
   on public.sikur_periode_semester(aktif)
