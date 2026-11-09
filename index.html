@@ -7,6 +7,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Google Fonts: Inter -->
@@ -292,7 +293,7 @@
                     </div>
                     <div class="text-right hidden sm:block">
                         <p class="text-sm font-medium text-gray-600" id="currentDateDisplay">Senin, 1 Jan 2024</p>
-                        <p class="text-xs text-gray-400">Tahun Ajaran 2026/2027 • Semester Ganjil</p>
+                        <p class="text-xs text-gray-400" id="academicPeriodHeader">Tahun Ajaran 2026/2027 • Semester Ganjil</p>
                     </div>
                 </div>
 
@@ -751,7 +752,7 @@
             <section id="sec-piket" class="hidden fade-in space-y-6">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">Guru Piket KBM</h2>
-                    <p class="text-sm text-gray-500 mt-1">Semester Ganjil TA 2026/2027 • Lampiran 14 SK Kepala SMA Negeri 1 Karangreja, 1 Juli 2026.</p>
+                    <p class="text-sm text-gray-500 mt-1">Daftar petugas piket ditetapkan melalui SK tersendiri dan perlu ditinjau setiap pergantian semester.</p>
                 </div>
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                     <div class="flex flex-wrap gap-2 mb-4" id="piketDayTabs"></div>
@@ -2213,7 +2214,7 @@
             const w = window.open('', '_blank');
             if (!w) { alert('Izinkan pop-up browser untuk mencetak jadwal.'); return; }
             const trs = rows.map(j => `<tr><td>${j.hari}</td><td>${j.jam_ke}</td><td>${j.waktu_mulai}–${j.waktu_selesai}</td><td>${j.kelas_nama}</td><td>${j.mapel_nama}</td><td>${j.guru_nama}</td></tr>`).join('');
-            w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:24px}h1{font-size:20px}p{font-size:12px;color:#555}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #999;padding:5px;text-align:left}th{background:#eee}@media print{button{display:none}}</style></head><body><h1>${title}</h1><p>SIKUR SMA Negeri 1 Karangreja • Tahun Ajaran 2026/2027 • Semester Ganjil</p><table><thead><tr><th>Hari</th><th>JP</th><th>Waktu</th><th>Kelas</th><th>Mata Pelajaran</th><th>Guru</th></tr></thead><tbody>${trs}</tbody></table><script>window.onload=()=>window.print()<\/script>
+            w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:Arial,sans-serif;padding:24px}h1{font-size:20px}p{font-size:12px;color:#555}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #999;padding:5px;text-align:left}th{background:#eee}@media print{button{display:none}}</style></head><body><h1>${title}</h1><p>SIKUR SMA Negeri 1 Karangreja • ${specialScheduleEsc(getAcademicPeriodLabel())}</p><table><thead><tr><th>Hari</th><th>JP</th><th>Waktu</th><th>Kelas</th><th>Mata Pelajaran</th><th>Guru</th></tr></thead><tbody>${trs}</tbody></table><script>window.onload=()=>window.print()<\/script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.error));
@@ -2755,12 +2756,19 @@ if ('serviceWorker' in navigator) {
             if(!sb) { if(showMessage) alert('Supabase belum terhubung.'); return; }
             try {
                 setSupabaseStatus(false,'Sinkronisasi…');
+                const periodResult=await sb.from('sikur_periode_semester').select('*').eq('aktif',true).maybeSingle();
+                if(periodResult.error) throw periodResult.error;
+                if(!periodResult.data) throw new Error('Belum ada periode semester aktif pada basis data.');
+                activeAcademicPeriod=periodResult.data;
+
                 // PostgREST/Supabase dapat membatasi satu respons sekitar 1000 baris.
                 // Jadwal resmi SIKUR >1000 baris, jadi ambil bertahap agar tidak terpotong.
                 async function fetchAllRows(table, orderColumn, ascending=true, pageSize=500) {
                     let rows=[], from=0;
                     while(true) {
-                        const {data,error}=await sb.from(table).select('*').order(orderColumn,{ascending}).range(from,from+pageSize-1);
+                        let query=sb.from(table).select('*').order(orderColumn,{ascending});
+                        if(table==='sikur_jadwal') query=query.eq('periode_id',activeAcademicPeriod.id);
+                        const {data,error}=await query.range(from,from+pageSize-1);
                         if(error) throw error;
                         rows.push(...(data||[]));
                         if(!data || data.length<pageSize) break;
@@ -2790,6 +2798,8 @@ if ('serviceWorker' in navigator) {
                 localStorage.setItem('sikur_ketidakhadiran',JSON.stringify(stateKetidakhadiran));
                 localStorage.setItem('sikur_pengganti',JSON.stringify(statePengganti));
                 updateDashboardStats(); updateOperationalStats(); renderOperationalHistory(); renderAbsenceHistory();
+                updateAcademicPeriodLabels();
+                await loadAcademicPeriods(false);
                 setSupabaseStatus(true,'Terhubung');
                 if(showMessage) alert('Sinkronisasi Supabase selesai.');
             } catch(e) {
@@ -2833,6 +2843,9 @@ if ('serviceWorker' in navigator) {
         // ==========================================
         let currentUser = null;
         let currentProfile = null;
+        let activeAcademicPeriod = null;
+        let stateAcademicPeriods = [];
+        let pendingSemesterImportRows = null;
 
         function roleCanWriteOperational() {
             return ['admin','waka','guru'].includes(currentProfile?.role);
@@ -3153,6 +3166,7 @@ if ('serviceWorker' in navigator) {
                 .on('postgres_changes',{event:'*',schema:'public',table:'sikur_ketidakhadiran'},()=>syncFromSupabase(false))
                 .on('postgres_changes',{event:'*',schema:'public',table:'sikur_pengganti'},()=>syncFromSupabase(false))
                 .on('postgres_changes',{event:'*',schema:'public',table:'sikur_jadwal_khusus'},()=>loadSpecialSchedules(true))
+                .on('postgres_changes',{event:'*',schema:'public',table:'sikur_periode_semester'},()=>syncFromSupabase(false))
                 .on('postgres_changes',{event:'*',schema:'public',table:'sikur_pesan_kelas'},()=>loadClassMessages())
                 .subscribe();
         }
@@ -3218,22 +3232,24 @@ if ('serviceWorker' in navigator) {
 
         async function replaceScheduleInSupabase(){
             if(!supabaseReady || !roleCanManageMaster()) return;
-            if(!confirm('Sinkronkan seluruh jadwal aktif ke Supabase?')) return;
-            setSupabaseStatus(false,'Sinkron jadwal…');
+            if(!activeAcademicPeriod) return alert('Periode semester aktif belum termuat.');
+            if(!confirm('Simpan perubahan jadwal sebagai versi baru untuk '+getAcademicPeriodLabel()+'? Versi sebelumnya tetap diarsipkan dan tidak dihapus.')) return;
+            setSupabaseStatus(false,'Menyimpan versi jadwal…');
             try{
                 const health=validateSIKURData(false);
                 if(health.errors.length) throw new Error('Jadwal belum lolos validasi: '+health.errors.join('; '));
-                const del=await sb.from('sikur_jadwal').delete().gt('id',0);
-                if(del.error) throw del.error;
                 const rows=dbJadwal.map(x=>({hari:x.hari,jam_ke:Number(x.jam_ke),kelas:x.kelas_id||x.kelas,kode_mapel:x.mapel_id||x.kode_mapel,kode_guru:x.guru_id||x.kode_guru}));
-                for(let i=0;i<rows.length;i+=300){
-                    const r=await sb.from('sikur_jadwal').insert(rows.slice(i,i+300));
-                    if(r.error) throw r.error;
-                }
+                const {data,error}=await sb.rpc('sikur_import_semester_schedule',{
+                    p_tahun_ajaran:activeAcademicPeriod.tahun_ajaran,
+                    p_semester:activeAcademicPeriod.semester,
+                    p_rows:rows
+                });
+                if(error) throw error;
                 await syncFromSupabase(false);
+                await loadAcademicPeriods(false);
                 setSupabaseStatus(true,'Terhubung');
-                alert('Jadwal berhasil disinkronkan ke Supabase.');
-            }catch(e){setSupabaseStatus(false,'Gagal sinkron');alert('Sinkronisasi jadwal dibatalkan/gagal: '+e.message);}
+                alert('Versi jadwal berhasil disimpan. Arsip sebelumnya tetap tersedia.');
+            }catch(e){setSupabaseStatus(false,'Gagal sinkron');alert('Penyimpanan jadwal dibatalkan/gagal: '+e.message);}
         }
 
         function validateSIKURData(show=true){
@@ -3260,9 +3276,262 @@ if ('serviceWorker' in navigator) {
         }
 
         function downloadFullBackup(){
-            const backup={app:'SIKUR SMANSAKA',version:'2.4',created_at:new Date().toISOString(),master:{guru:dbGuru,kelas:dbKelas,mapel:dbMapel,jam_kbm:dbJamKbm,jadwal:dbJadwal},operasional:{ketidakhadiran:stateKetidakhadiran,pengganti:statePengganti,agenda:stateAgenda,pengumuman:stateAnnouncements,perubahan_ruang:stateRoomChanges}};
+            const backup={app:'SIKUR SMANSAKA',version:'2.5',created_at:new Date().toISOString(),periode_aktif:activeAcademicPeriod,master:{guru:dbGuru,kelas:dbKelas,mapel:dbMapel,jam_kbm:dbJamKbm,jadwal:dbJadwal},operasional:{ketidakhadiran:stateKetidakhadiran,pengganti:statePengganti,agenda:stateAgenda,pengumuman:stateAnnouncements,perubahan_ruang:stateRoomChanges}};
             const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),a=document.createElement('a');
             a.href=URL.createObjectURL(blob);a.download=`SIKUR_Backup_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);
+        }
+
+        // ==========================================
+        // 21. MANAJEMEN SEMESTER & IMPOR EXCEL
+        // ==========================================
+        function getAcademicPeriodLabel(period=activeAcademicPeriod) {
+            return period ? 'Tahun Ajaran '+period.tahun_ajaran+' • Semester '+period.semester : 'Periode semester belum diketahui';
+        }
+
+        function updateAcademicPeriodLabels() {
+            const label=getAcademicPeriodLabel();
+            const header=document.getElementById('academicPeriodHeader');
+            if(header) header.textContent=label;
+            const status=document.getElementById('academicPeriodCurrent');
+            if(status) status.textContent=activeAcademicPeriod ? label+' • Versi '+activeAcademicPeriod.versi : 'Periode aktif belum termuat';
+        }
+
+        function addAcademicPeriodControls() {
+            const master=document.getElementById('sec-master');
+            if(!master || document.getElementById('academicPeriodManager')) return;
+            const panel=document.createElement('div');
+            panel.id='academicPeriodManager';
+            panel.className='bg-white rounded-xl shadow-sm border border-blue-100 p-5 space-y-4';
+            panel.innerHTML=`
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div><h3 class="font-semibold text-gray-800 flex items-center gap-2"><i class="ph ph-calendar-check text-blue-600"></i> Periode Semester & Impor Jadwal</h3>
+                    <p class="text-sm text-gray-500 mt-1">Impor Excel untuk membuat jadwal semester baru. Jadwal sebelumnya tetap tersimpan sebagai arsip.</p></div>
+                    <span class="text-xs rounded-full px-3 py-1 bg-green-50 text-green-700" id="academicPeriodCurrent">Memuat periode aktif...</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterTargetYear">Tahun ajaran</label><input id="semesterTargetYear" value="2026/2027" placeholder="2026/2027" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterTargetTerm">Semester tujuan</label><select id="semesterTargetTerm" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><option value="Ganjil">Ganjil</option><option value="Genap" selected>Genap</option></select></div>
+                </div>
+                <div class="border border-dashed border-gray-300 rounded-xl p-4 space-y-3">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1" for="semesterExcelFile">File jadwal (.xlsx, .xls, atau .csv)</label><input id="semesterExcelFile" type="file" accept=".xlsx,.xls,.csv" onchange="previewSemesterImport()" class="block w-full text-sm text-gray-600"></div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="downloadSemesterTemplate()" class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium"><i class="ph ph-file-xls mr-1"></i> Unduh Template Excel</button>
+                        <button type="button" onclick="previewSemesterImport()" class="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium">Periksa File</button>
+                    </div>
+                    <div id="semesterImportPreview" class="text-sm text-gray-500">Unggah file jadwal untuk melihat pratinjau dan hasil validasi.</div>
+                    <button id="btnActivateImportedSemester" type="button" onclick="activateImportedSemester()" disabled class="bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-semibold">Validasi file terlebih dahulu</button>
+                </div>
+                <div class="space-y-2">
+                    <div><h4 class="font-semibold text-gray-800">Arsip Periode</h4><p class="text-xs text-gray-500">Pilih Aktifkan untuk kembali menggunakan jadwal semester terdahulu tanpa impor ulang.</p></div>
+                    <div id="academicPeriodArchive" class="space-y-2"><p class="text-sm text-gray-400">Memuat arsip...</p></div>
+                </div>
+                <p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-3">Catatan: daftar Guru Piket, wali kelas, dan pengaturan waktu JP tidak otomatis berubah saat semester diganti. Periksa pembaruan SK dan pengaturan waktunya secara terpisah.</p>
+            `;
+            const controls=document.getElementById('v24Controls');
+            if(controls) controls.insertAdjacentElement('afterend',panel);
+            else master.insertBefore(panel,master.children[1]||null);
+            updateAcademicPeriodLabels();
+            if(activeAcademicPeriod) {
+                document.getElementById('semesterTargetYear').value=activeAcademicPeriod.tahun_ajaran;
+                document.getElementById('semesterTargetTerm').value=activeAcademicPeriod.semester==='Ganjil'?'Genap':'Ganjil';
+            }
+        }
+
+        async function loadAcademicPeriods(showError=true) {
+            if(!sb || !currentUser) return;
+            const {data,error}=await sb.from('sikur_periode_semester').select('*').order('created_at',{ascending:false}).limit(40);
+            if(error) {
+                const box=document.getElementById('academicPeriodArchive');
+                if(box) box.innerHTML='<p class="text-sm text-red-600">Arsip periode gagal dimuat: '+specialScheduleEsc(error.message)+'</p>';
+                if(showError) console.warn('Arsip periode:',error);
+                return;
+            }
+            stateAcademicPeriods=data||[];
+            activeAcademicPeriod=stateAcademicPeriods.find(x=>x.aktif===true)||activeAcademicPeriod;
+            updateAcademicPeriodLabels();
+            renderAcademicPeriodArchive();
+            if(activeAcademicPeriod) {
+                const year=document.getElementById('semesterTargetYear');
+                const term=document.getElementById('semesterTargetTerm');
+                if(year && !year.value) year.value=activeAcademicPeriod.tahun_ajaran;
+                if(term && !term.dataset.touched) term.value=activeAcademicPeriod.semester==='Ganjil'?'Genap':'Ganjil';
+            }
+        }
+
+        function renderAcademicPeriodArchive() {
+            const box=document.getElementById('academicPeriodArchive');
+            if(!box) return;
+            if(!stateAcademicPeriods.length) {
+                box.innerHTML='<p class="text-sm text-gray-500">Belum ada arsip periode.</p>';
+                return;
+            }
+            box.innerHTML=stateAcademicPeriods.map(period=>{
+                const label=specialScheduleEsc(period.tahun_ajaran+' • Semester '+period.semester+' • Versi '+period.versi);
+                return '<div class="flex flex-wrap items-center justify-between gap-3 border rounded-lg p-3 '+(period.aktif?'border-green-200 bg-green-50':'border-gray-200')+'"><div class="min-w-0"><p class="text-sm font-semibold text-gray-800">'+label+'</p><p class="text-xs text-gray-500">'+(period.aktif?'Sedang digunakan':'Arsip')+' • '+new Date(period.created_at).toLocaleDateString('id-ID')+'</p></div>'+(period.aktif?'<span class="text-xs font-semibold text-green-700">Aktif</span>':'<button type="button" onclick="activateArchivedSemester(\''+period.id+'\')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold">Aktifkan</button>')+'</div>';
+            }).join('');
+        }
+
+        function downloadSemesterTemplate() {
+            if(!window.XLSX) return alert('Komponen pembaca Excel belum termuat. Periksa koneksi internet.');
+            const wb=XLSX.utils.book_new();
+            const ws=XLSX.utils.aoa_to_sheet([['Hari','JP','Kelas','Kode Mapel','Kode Guru']]);
+            ws['!cols']=[{wch:14},{wch:8},{wch:12},{wch:18},{wch:18}];
+            XLSX.utils.book_append_sheet(wb,ws,'Jadwal');
+            const guide=XLSX.utils.aoa_to_sheet([
+                ['PETUNJUK IMPOR JADWAL SIKUR'],
+                ['Isi satu baris untuk satu kelas pada satu JP.'],
+                ['Nama kolom wajib: Hari, JP, Kelas, Kode Mapel, Kode Guru.'],
+                ['Kode kelas, kode mapel, dan kode guru harus sesuai dengan Data Master SIKUR.'],
+                ['Hari/JP harus tersedia pada pengaturan Jam KBM.'],
+                ['Pastikan tidak ada kelas atau guru yang bentrok pada hari dan JP yang sama.'],
+                ['Semua kelas yang terdaftar di Data Master harus memiliki jadwal.']
+            ]);
+            guide['!cols']=[{wch:105}];
+            XLSX.utils.book_append_sheet(wb,guide,'Petunjuk');
+            XLSX.writeFile(wb,'Template_Impor_Jadwal_SIKUR.xlsx');
+        }
+
+        function normalizeExcelValue(value) {
+            return String(value??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+        }
+
+        function findExcelColumn(header,aliases) {
+            const normalized=header.map(normalizeExcelValue);
+            for(const alias of aliases) {
+                const idx=normalized.indexOf(normalizeExcelValue(alias));
+                if(idx>=0) return idx;
+            }
+            return -1;
+        }
+
+        function resolveMasterKey(value,list) {
+            const raw=String(value??'').trim();
+            if(!raw) return {value:null,error:'kosong'};
+            const key=raw.toUpperCase();
+            const byId=list.filter(x=>String(x.id).toUpperCase()===key);
+            if(byId.length===1) return {value:byId[0].id};
+            if(byId.length>1) return {value:null,error:'ambigu'};
+            const byName=list.filter(x=>normalizeExcelValue(x.nama)===normalizeExcelValue(raw));
+            if(byName.length===1) return {value:byName[0].id};
+            if(byName.length>1) return {value:null,error:'ambigu'};
+            return {value:null,error:'tidak ditemukan'};
+        }
+
+        async function previewSemesterImport() {
+            const input=document.getElementById('semesterExcelFile');
+            const preview=document.getElementById('semesterImportPreview');
+            const button=document.getElementById('btnActivateImportedSemester');
+            pendingSemesterImportRows=null;
+            button.disabled=true;button.textContent='Validasi file terlebih dahulu';
+            const file=input?.files?.[0];
+            if(!file) {preview.textContent='Pilih file Excel atau CSV terlebih dahulu.';return;}
+            if(!window.XLSX) {preview.textContent='Komponen pembaca Excel belum termuat. Periksa koneksi internet.';return;}
+            preview.textContent='Membaca dan memeriksa file...';
+            try {
+                const workbook=XLSX.read(await file.arrayBuffer(),{type:'array'});
+                const sheetName=workbook.SheetNames[0];
+                if(!sheetName) throw new Error('File tidak memiliki lembar kerja.');
+                const matrix=XLSX.utils.sheet_to_json(workbook.Sheets[sheetName],{header:1,defval:'',raw:false,blankrows:false});
+                if(!matrix.length) throw new Error('Lembar kerja kosong.');
+                const aliases={
+                    hari:['hari'],
+                    jp:['jp','jamke','jampembelajaran','jamkeberapa'],
+                    kelas:['kelas','rombel','kodekelas','namakelas'],
+                    mapel:['kodemapel','mapel','matapelajaran','namamapel','kodepelajaran'],
+                    guru:['kodeguru','guru','namaguru','pengajar','gurupengampu']
+                };
+                let headerIndex=-1,cols={};
+                for(let i=0;i<Math.min(matrix.length,15);i++){
+                    const row=(matrix[i]||[]).map(x=>String(x??''));
+                    const found={};
+                    for(const key of Object.keys(aliases)) found[key]=findExcelColumn(row,aliases[key]);
+                    if(Object.values(found).every(x=>x>=0)){headerIndex=i;cols=found;break;}
+                }
+                if(headerIndex<0) throw new Error('Header wajib belum ditemukan. Gunakan template: Hari, JP, Kelas, Kode Mapel, Kode Guru.');
+                const days=new Map(['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'].map(x=>[x.toLowerCase(),x]));
+                const rows=[],errors=[],classKeys=new Set(),teacherSlots=new Set(),classSlots=new Set();
+                for(let i=headerIndex+1;i<matrix.length;i++){
+                    const row=matrix[i]||[];
+                    if(!row.some(v=>String(v??'').trim()!=='')) continue;
+                    const excelRow=i+1;
+                    const dayRaw=String(row[cols.hari]??'').trim();
+                    const day=days.get(dayRaw.toLowerCase());
+                    const jpRaw=String(row[cols.jp]??'').trim();
+                    const jpMatch=jpRaw.match(/\d+/);
+                    const jp=jpMatch?Number(jpMatch[0]):NaN;
+                    const kelas=resolveMasterKey(row[cols.kelas],dbKelas);
+                    const mapel=resolveMasterKey(row[cols.mapel],dbMapel);
+                    const guru=resolveMasterKey(row[cols.guru],dbGuru);
+                    const issues=[];
+                    if(!day) issues.push('hari tidak dikenali');
+                    if(!Number.isInteger(jp)||jp<1) issues.push('JP tidak valid');
+                    else if(day && !dbJamKbm.some(x=>x.hari===day && Number(x.jam_ke)===jp)) issues.push(day+' JP-'+jp+' tidak tersedia');
+                    if(kelas.error) issues.push('kelas '+kelas.error);
+                    if(mapel.error) issues.push('mapel '+mapel.error);
+                    if(guru.error) issues.push('guru '+guru.error);
+                    if(!issues.length){
+                        const ck=day+'|'+jp+'|'+kelas.value;
+                        const tk=day+'|'+jp+'|'+guru.value;
+                        if(classSlots.has(ck)) issues.push('kelas memiliki dua jadwal pada JP yang sama');
+                        if(teacherSlots.has(tk)) issues.push('guru mengajar di lebih dari satu kelas pada JP yang sama');
+                        classSlots.add(ck);teacherSlots.add(tk);classKeys.add(kelas.value);
+                        rows.push({hari:day,jam_ke:jp,kelas:kelas.value,kode_mapel:mapel.value,kode_guru:guru.value});
+                    }
+                    if(issues.length) errors.push('Baris '+excelRow+': '+issues.join('; '));
+                }
+                const missing=(dbKelas||[]).filter(k=>!classKeys.has(k.id)).map(k=>k.nama||k.id);
+                missing.forEach(name=>errors.push('Jadwal belum memuat kelas '+name));
+                if(!rows.length) errors.push('Tidak ada baris jadwal yang valid.');
+                const warnings=[];
+                if(rows.length!==1269) warnings.push('Jumlah '+rows.length+' slot, sementara jadwal sebelumnya berjumlah '+dbJadwal.length+'. Pastikan pengurangan atau penambahannya memang direncanakan.');
+                const valid=errors.length===0;
+                pendingSemesterImportRows=valid?rows:null;
+                preview.innerHTML='<div class="rounded-lg '+(valid?'bg-green-50 border-green-200 text-green-800':'bg-red-50 border-red-200 text-red-800')+' border p-3"><p class="font-semibold">'+(valid?'Validasi berhasil':'Ditemukan masalah pada file')+'</p><p class="mt-1">Jadwal valid: '+rows.length+' • Kelas tercakup: '+classKeys.size+'/'+dbKelas.length+'</p>'+(warnings.length?'<p class="mt-2 text-amber-800">'+warnings.map(specialScheduleEsc).join('<br>')+'</p>':'')+(errors.length?'<ul class="mt-2 list-disc list-inside space-y-1">'+errors.slice(0,30).map(x=>'<li>'+specialScheduleEsc(x)+'</li>').join('')+'</ul>'+(errors.length>30?'<p class="mt-1">Dan '+(errors.length-30)+' masalah lainnya.</p>':''):'')+'</div>';
+                button.disabled=!valid;
+                button.textContent=valid?'Aktifkan Jadwal Semester Baru':'Perbaiki File Excel';
+            } catch(e) {
+                preview.innerHTML='<p class="text-sm text-red-600">'+specialScheduleEsc(e.message||String(e))+'</p>';
+            }
+        }
+
+        async function activateImportedSemester() {
+            if(!canManageCurriculumContent() || !supabaseReady || !pendingSemesterImportRows) return;
+            const year=document.getElementById('semesterTargetYear').value.trim();
+            const term=document.getElementById('semesterTargetTerm').value;
+            if(!/^\d{4}\/\d{4}$/.test(year)) return alert('Tahun ajaran harus berformat YYYY/YYYY.');
+            const count=pendingSemesterImportRows.length;
+            if(!confirm('Aktifkan jadwal '+year+' Semester '+term+' dengan '+count+' slot? Periode aktif sebelumnya akan disimpan sebagai arsip dan tidak dihapus.')) return;
+            const button=document.getElementById('btnActivateImportedSemester');
+            button.disabled=true;button.textContent='Mengaktifkan...';
+            try {
+                const {data,error}=await sb.rpc('sikur_import_semester_schedule',{
+                    p_tahun_ajaran:year,p_semester:term,p_rows:pendingSemesterImportRows
+                });
+                if(error) throw error;
+                pendingSemesterImportRows=null;
+                document.getElementById('semesterExcelFile').value='';
+                document.getElementById('semesterImportPreview').textContent='Jadwal semester baru berhasil diaktifkan.';
+                await syncFromSupabase(false);
+                await loadAcademicPeriods(false);
+                button.textContent='Aktifkan Jadwal Semester Baru';
+                alert('Jadwal berhasil diaktifkan. '+(data?.jumlah_jadwal||count)+' slot dari '+(data?.jumlah_kelas||'')+' kelas telah dimuat. Jadwal lama tersimpan sebagai arsip.');
+            } catch(e) {
+                button.disabled=false;button.textContent='Aktifkan Jadwal Semester Baru';
+                alert('Gagal mengaktifkan semester: '+(e.message||String(e)));
+            }
+        }
+
+        async function activateArchivedSemester(id) {
+            if(!canManageCurriculumContent() || !confirm('Aktifkan kembali jadwal dari arsip ini? Jadwal yang sekarang aktif akan diarsipkan.')) return;
+            try {
+                const {data,error}=await sb.rpc('sikur_aktifkan_periode_semester',{p_periode_id:id});
+                if(error) throw error;
+                await syncFromSupabase(false);
+                await loadAcademicPeriods(false);
+                alert('Periode arsip berhasil diaktifkan kembali.');
+            } catch(e) {
+                alert('Gagal mengaktifkan arsip: '+(e.message||String(e)));
+            }
         }
 
         function addV24Controls(){
@@ -3271,10 +3540,11 @@ if ('serviceWorker' in navigator) {
                 box.innerHTML='<button onclick="validateSIKURData()" class="px-3 py-2 text-sm border rounded-lg">Periksa Integritas Data</button><button onclick="persistMasterSnapshotToSupabase()" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg">Sinkron Master</button><button onclick="replaceScheduleInSupabase()" class="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg">Sinkron Jadwal</button><button onclick="downloadFullBackup()" class="px-3 py-2 text-sm border rounded-lg">Backup Lengkap</button>';
                 master.insertBefore(box,master.children[1]||null);
             }
+            addAcademicPeriodControls();
         }
 
         const _applyRoleV24=applyRoleUI;
-        applyRoleUI=function(){_applyRoleV24();addV24Controls();const c=document.getElementById('v24Controls');if(c)c.style.display=roleCanManageMaster()?'flex':'none';};
+        applyRoleUI=function(){_applyRoleV24();addV24Controls();const c=document.getElementById('v24Controls');if(c)c.style.display=roleCanManageMaster()?'flex':'none';const m=document.getElementById('academicPeriodManager');if(m)m.style.display=roleCanManageMaster()?'block':'none';};
 
         // After existing local CRUD succeeds, mirror master state to Supabase.
         const _saveMasterV24=saveMasterItem;
