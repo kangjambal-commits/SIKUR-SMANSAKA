@@ -56,3 +56,28 @@ Menu **Pesan Kelas** digunakan Admin/Waka untuk mengirim informasi kepada satu k
 - Pengiriman dan perubahan pesan dibatasi oleh RLS untuk role `admin` dan `waka`.
 - PantauKBM mengambil pesan melalui RPC tervalidasi menggunakan token sesi kelas; tabel pesan tidak dibuka untuk akses langsung anon.
 - Jalankan `SIKUR_14_PESAN_KELAS.sql` setelah `SIKUR_13_JADWAL_KHUSUS.sql` pada proyek Supabase yang benar.
+
+
+## Periode Semester dan Impor Jadwal
+
+Menu **Data Master → Periode Semester & Impor Jadwal** digunakan Admin/Waka untuk memasang jadwal baru dari Excel atau CSV.
+
+Format lembar kerja:
+- `Hari`
+- `JP`
+- `Kelas`
+- `Kode Mapel`
+- `Kode Guru`
+
+Satu baris mewakili satu kelas pada satu JP. Kode harus sesuai dengan Data Master SIKUR. Semua kelas Data Master wajib tercakup; kombinasi hari/JP harus tersedia pada pengaturan Jam KBM.
+
+Sebelum jadwal diaktifkan, aplikasi memeriksa kelas, guru, mata pelajaran, JP, duplikasi slot kelas, dan bentrok guru. Server mengulang validasi dan hanya menerima perubahan dari role `admin` atau `waka`.
+
+**Jadwal lama tidak dihapus.** Setiap impor membuat versi periode baru; jadwal sebelumnya tetap berada di arsip dan dapat diaktifkan kembali. ID jadwal lama tetap dipertahankan karena masih dirujuk oleh laporan PantauKBM dan penugasan guru pengganti.
+
+Urutan migrasi:
+1. `SIKUR_15_SEMESTER_DAN_IMPOR_JADWAL.sql`
+2. `SIKUR_16_UNIQUE_JADWAL_PER_PERIODE.sql`
+3. `SIKUR_17_UNIQUE_GURU_SLOT_PER_PERIODE.sql`
+
+Pengaturan waktu JP, daftar Guru Piket, dan penetapan Wali Kelas merupakan data terpisah; tinjau kembali saat pergantian semester. Data laporan KBM lama tetap tersimpan.
