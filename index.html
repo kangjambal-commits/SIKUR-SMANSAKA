@@ -3266,15 +3266,18 @@ if ('serviceWorker' in navigator) {
 
         function openNewSpecialSchedule() {
             if(!canManageCurriculumContent()) return alert('Hanya Admin/Waka Kurikulum yang dapat mengatur jadwal khusus.');
+            const today=monitoringTodayWIB();
+            if(specialScheduleFind(today)) return editSpecialSchedule(today);
             const editor=document.getElementById('specialScheduleEditor');
+            const dateField=document.getElementById('specialScheduleDate');
             editor.dataset.open='true';
             editor.classList.remove('hidden');
-            document.getElementById('specialScheduleDate').value=monitoringTodayWIB();
+            dateField.value=today;
             document.getElementById('specialScheduleName').value='';
             document.getElementById('specialScheduleNotes').value='';
             document.getElementById('specialScheduleFormTitle').textContent='Buat Jadwal Khusus';
             document.getElementById('specialScheduleMessage').textContent='';
-            renderSpecialScheduleTimes(specialScheduleDefaultSlots(monitoringTodayWIB()));
+            renderSpecialScheduleTimes(specialScheduleDefaultSlots(today));
             editor.scrollIntoView({behavior:'smooth',block:'start'});
         }
 
